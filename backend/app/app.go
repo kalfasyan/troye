@@ -28,6 +28,7 @@ func Register(app core.App, cfg Config) {
 	app.Cron().SetTimezone(time.Local)
 
 	registerPlan(app)
+	registerDiary(app)
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.GET("/api/app/info", info)
