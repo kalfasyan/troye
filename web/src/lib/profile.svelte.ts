@@ -1,3 +1,4 @@
+import type { FoodLanguage } from './diary';
 import { pb } from './pb';
 import type { Answers, Plan, Profile } from './profile';
 import { planRequest } from './profile';
@@ -54,6 +55,15 @@ class ProfileStore {
     this.current = this.current
       ? await pb.collection('profiles').update<Profile>(this.current.id, body)
       : await pb.collection('profiles').create<Profile>({ ...body, user: session.user!.id });
+  }
+
+  /** Sets the language food names show in. */
+  async setFoodLanguage(food_language: FoodLanguage) {
+    if (this.current) {
+      this.current = await pb
+        .collection('profiles')
+        .update<Profile>(this.current.id, { food_language });
+    }
   }
 
   /** Opens the interview again, keeping the answers. */

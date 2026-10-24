@@ -33,6 +33,10 @@ func TestBarcode(t *testing.T) {
 			// no name in the product's own language, only in Dutch
 			_, _ = w.Write([]byte(`{"status":1,"code":"0012345678905","product":{"product_name":"","product_name_nl":"Halfvolle melk",
 				"nutriments":{"energy-kj_100g":192,"proteins_100g":3.4,"carbohydrates_100g":4.7,"fat_100g":1.5,"sodium_100g":0.04}}}`))
+		case "/api/v2/product/5411188112709.json":
+			// named in German first, with English and French names too
+			_, _ = w.Write([]byte(`{"status":1,"product":{"product_name":"Geröstete Mandel","product_name_en":"Roasted almond drink",
+				"product_name_fr":"Lait amande grillée","brands":"Alpro","nutriments":{"energy-kcal_100g":14}}}`))
 		case "/api/v2/product/1234567890123.json":
 			w.WriteHeader(http.StatusNotFound)
 			_, _ = w.Write([]byte(`{"status":0,"status_verbose":"product not found"}`))
@@ -91,6 +95,14 @@ func TestBarcode(t *testing.T) {
 					t.Errorf("%d calls to Open Food Facts", calls.Load())
 				}
 			},
+		},
+		{
+			Name:            "the English name comes first, and the product's own name stays searchable",
+			Method:          http.MethodGet,
+			URL:             "/api/app/barcode/5411188112709",
+			Headers:         auth,
+			ExpectedStatus:  http.StatusOK,
+			ExpectedContent: []string{`"name":"Roasted almond drink"`, `"name_fr":"Lait amande grillée"`, `"aliases":"Geröstete Mandel"`},
 		},
 		{
 			Name:            "an unknown product asks for a custom food",

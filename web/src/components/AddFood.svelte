@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { amountOf, meals, portions, type Food, type Meal } from '../lib/diary';
+  import { amountOf, foodName, meals, portions, type Food, type Meal } from '../lib/diary';
   import { diary, lookupBarcode, saveCustomFood, searchFoods } from '../lib/diary.svelte';
   import { errorMessage } from '../lib/pb';
   import { photos } from '../lib/photos.svelte';
+  import { profile } from '../lib/profile.svelte';
   import BarcodeScanner from './BarcodeScanner.svelte';
   import Sheet from './Sheet.svelte';
 
@@ -28,6 +29,7 @@
   let food = $state<Food | null>(null);
   let grams = $state<number | undefined>(100);
   const preview = $derived(food && grams ? amountOf(food, grams) : null);
+  const name = (f: Food) => foodName(f, profile.current?.food_language);
 
   // the custom food and quick add forms
   let custom = $state({
@@ -191,7 +193,7 @@
       onclick={() => pick(f)}
     >
       <span class="min-w-0">
-        <span class="block truncate font-medium">{f.name}</span>
+        <span class="block truncate font-medium">{name(f)}</span>
         <span class="block truncate text-sm text-zinc-500 dark:text-zinc-400">
           {[f.brand, f.serving_g ? f.serving_label || `${f.serving_g} g` : '100 g']
             .filter(Boolean)
@@ -273,7 +275,7 @@
     {/if}
   {:else if view === 'amount' && food}
     <div class="card">
-      <p class="font-semibold">{food.name}</p>
+      <p class="font-semibold">{name(food)}</p>
       {#if food.brand}<p class="text-sm text-zinc-500 dark:text-zinc-400">{food.brand}</p>{/if}
       <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{food.kcal} kcal per 100 g</p>
     </div>

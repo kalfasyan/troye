@@ -4,7 +4,10 @@ import (
 	"errors"
 	"math"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+
+	"github.com/selfhostit/troye/foods"
 )
 
 // The food diary: entries get their totals from their food. Food search,
@@ -40,7 +43,11 @@ func fillEntry(app core.App, entry *core.Record) error {
 		return errors.New("that food belongs to someone else")
 	}
 	if entry.GetString("name") == "" {
-		entry.Set("name", food.GetString("name"))
+		lang := ""
+		if p, err := app.FindFirstRecordByFilter("profiles", "user = {:user}", dbx.Params{"user": entry.GetString("user")}); err == nil {
+			lang = p.GetString("food_language")
+		}
+		entry.Set("name", foods.Name(food, lang))
 	}
 	factor := entry.GetFloat("grams") / 100
 	for _, field := range []string{"kcal", "protein", "carbs", "fat"} {

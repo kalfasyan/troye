@@ -60,6 +60,26 @@ func TestEntryTotals(t *testing.T) {
 		t.Errorf("quick add: %v, kcal %v", err, q.GetFloat("kcal"))
 	}
 
+	// someone who chose Dutch food names gets the Dutch name, or the English
+	// one when the food has none
+	p := addProfile(t, a, bob.Id)
+	p.Set("food_language", "nl")
+	if err := a.Save(p); err != nil {
+		t.Fatal(err)
+	}
+	rice.Set("name_nl", "Rijst, gekookt")
+	if err := a.Save(rice); err != nil {
+		t.Fatal(err)
+	}
+	pasta := addFood(t, a, "Pasta, cooked", "", 150, 5)
+	for food, want := range map[string]string{rice.Id: "Rijst, gekookt", pasta.Id: "Pasta, cooked"} {
+		d := core.NewRecord(entries)
+		d.Load(map[string]any{"user": bob.Id, "date": "2026-10-24", "meal": "dinner", "food": food, "grams": 100})
+		if err := a.Save(d); err != nil || d.GetString("name") != want {
+			t.Errorf("Dutch entry name %q, want %q (%v)", d.GetString("name"), want, err)
+		}
+	}
+
 	// someone else's custom food can't be logged
 	secret := addFood(t, a, "Bob's granola", bob.Id, 450, 10)
 	x := core.NewRecord(entries)

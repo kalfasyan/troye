@@ -153,12 +153,16 @@ func offFood(code string, field, nutrient func(string) string) (Food, bool) {
 	}
 
 	f := Food{SourceID: code, Barcode: code, NameNL: field("product_name_nl"), NameFR: field("product_name_fr")}
-	// the name in the product's own language, else in English, Dutch or French
-	for _, name := range []string{field("product_name"), field("product_name_en"), f.NameNL, f.NameFR, field("generic_name")} {
+	// the English name, else Dutch or French, else the name in the product's
+	// own language, which stays searchable as an alias
+	for _, name := range []string{field("product_name_en"), f.NameNL, f.NameFR, field("product_name"), field("generic_name")} {
 		if name = strings.TrimSpace(name); name != "" {
 			f.Name = name
 			break
 		}
+	}
+	if own := strings.TrimSpace(field("product_name")); own != "" && own != f.Name && own != f.NameNL && own != f.NameFR {
+		f.Aliases = own
 	}
 	kcal, ok := num(nutrient("energy-kcal_100g"))
 	if !ok {

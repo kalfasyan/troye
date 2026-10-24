@@ -14,6 +14,8 @@ export const meals: { id: Meal; label: string }[] = [
 /** A food, with nutrition values per 100 g. */
 export interface Food extends RecordModel {
   name: string;
+  name_nl?: string;
+  name_fr?: string;
   brand: string;
   source: 'custom' | 'off' | 'ciqual' | 'nevo' | 'usda';
   barcode: string;
@@ -57,6 +59,22 @@ export function sum(entries: Pick<Entry, keyof Totals>[]): Totals {
     t.fat += e.fat;
   }
   return t;
+}
+
+export type FoodLanguage = 'en' | 'nl' | 'fr';
+
+export const foodLanguages: { id: FoodLanguage; label: string }[] = [
+  { id: 'en', label: 'English' },
+  { id: 'nl', label: 'Nederlands' },
+  { id: 'fr', label: 'Français' },
+];
+
+/** A food's name in the person's language, or its English name; the server does the same for entries. */
+export function foodName(
+  food: Pick<Food, 'name' | 'name_nl' | 'name_fr'>,
+  lang: FoodLanguage | '' | undefined,
+): string {
+  return (lang === 'nl' ? food.name_nl : lang === 'fr' ? food.name_fr : '') || food.name;
 }
 
 /** What an amount of a food comes to; the server does the same for saved entries. */

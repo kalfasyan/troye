@@ -51,6 +51,17 @@ type Food struct {
 	ServingLabel string  `json:"serving_label,omitempty"`
 }
 
+// Name is a food's name in the given language (en, nl or fr), or its English
+// name when it has none in that language.
+func Name(food *core.Record, lang string) string {
+	if lang == "nl" || lang == "fr" {
+		if name := food.GetString("name_" + lang); name != "" {
+			return name
+		}
+	}
+	return food.GetString("name")
+}
+
 var barcodePattern = regexp.MustCompile(`^\d{6,14}$`)
 
 // record is the food as columns of the foods table.
