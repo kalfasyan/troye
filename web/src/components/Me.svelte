@@ -5,6 +5,7 @@
   import { profile } from '../lib/profile.svelte';
   import { session } from '../lib/session.svelte';
   import Accuracy from './Accuracy.svelte';
+  import FoodData from './FoodData.svelte';
   import Notifications from './Notifications.svelte';
 
   // The person's plan, their "why", notifications and account.
@@ -17,6 +18,7 @@
         .filter(Boolean)
         .join(' · '),
   );
+  let showFoodData = $state(false);
   const version = pb
     .send<{ version: string }>('/api/app/info', {})
     .then((i) => i.version)
@@ -70,6 +72,11 @@
 <Accuracy />
 
 <Notifications />
+
+<button class="btn-secondary" onclick={() => (showFoodData = true)}>Food data and sources</button>
+{#if showFoodData}
+  <FoodData onclose={() => (showFoodData = false)} />
+{/if}
 
 <section class="card text-sm text-zinc-600 dark:text-zinc-400">
   Signed in as {user.email}{session.isOwner ? ' (owner)' : ''}.
