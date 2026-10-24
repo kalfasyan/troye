@@ -11,8 +11,8 @@ import (
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/kalfasyan/troye/jobs"
-	"github.com/kalfasyan/troye/push"
+	"github.com/selfhostit/troye/jobs"
+	"github.com/selfhostit/troye/push"
 )
 
 // Exercise, water and the weekly summary.

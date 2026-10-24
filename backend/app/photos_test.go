@@ -17,7 +17,7 @@ import (
 	"github.com/pocketbase/pocketbase/tests"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 
-	"github.com/kalfasyan/troye/app"
+	"github.com/selfhostit/troye/app"
 )
 
 func pngBytes(t testing.TB) []byte {

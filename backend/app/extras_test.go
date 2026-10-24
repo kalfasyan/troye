@@ -8,7 +8,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/kalfasyan/troye/app"
+	"github.com/selfhostit/troye/app"
 )
 
 func save(t testing.TB, a core.App, collection string, data map[string]any) *core.Record {

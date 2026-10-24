@@ -14,7 +14,7 @@ follow your weight on a trend chart. Photos are analysed by a vision model on
 your own GPU PC, never by a cloud service, and every photo and log stays at home.
 
 It is a work in progress; [docs/plan.md](docs/plan.md) has the architecture and
-the build plan. Troye is built on [plasto](https://github.com/kalfasyan/plasto).
+the build plan. Troye is built on [plasto](https://github.com/selfhostit/plasto).
 
 ## Quick start
 
@@ -79,7 +79,7 @@ those records and notify people.
 On any Linux machine with Docker (a NAS, a Raspberry Pi, a server):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/kalfasyan/troye/main/deploy/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/selfhostit/troye/main/deploy/install.sh | sh
 ```
 
 It asks for a Tailscale auth key, so your devices reach the app at
@@ -119,8 +119,8 @@ Makefile            run `make` to see every command
 | `make run`   | Build the Docker image and run it on :8090            |
 | `make smoke` | Deploy both images with Compose and test end to end   |
 
-Pushes to `main` publish `ghcr.io/kalfasyan/troye` and
-`ghcr.io/kalfasyan/troye-worker` for amd64, arm64 and armv7; a `v*` tag
+Pushes to `main` publish `ghcr.io/selfhostit/troye` and
+`ghcr.io/selfhostit/troye-worker` for amd64, arm64 and armv7; a `v*` tag
 publishes that version.
 
 ## Support

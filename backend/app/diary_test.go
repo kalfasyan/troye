@@ -10,7 +10,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 
-	"github.com/kalfasyan/troye/app"
+	"github.com/selfhostit/troye/app"
 )
 
 // addFood saves a food with the given kcal and protein per 100 g; owner may be empty.

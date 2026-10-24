@@ -8,8 +8,8 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 
-	"github.com/kalfasyan/troye/app"
-	_ "github.com/kalfasyan/troye/migrations"
+	"github.com/selfhostit/troye/app"
+	_ "github.com/selfhostit/troye/migrations"
 )
 
 // newApp starts an empty app with the troye migrations and routes.

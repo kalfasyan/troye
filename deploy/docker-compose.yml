@@ -4,7 +4,7 @@
 
 services:
   app:
-    image: ${TROYE_IMAGE:-ghcr.io/kalfasyan/troye:latest}
+    image: ${TROYE_IMAGE:-ghcr.io/selfhostit/troye:latest}
     restart: unless-stopped
     # Run as the owner of ./pb_data, so the data folder stays yours (and a NAS user's).
     user: ${PUID:-1000}:${PGID:-1000}
@@ -23,7 +23,7 @@ services:
   # Runs one of the workers in workers/, TROYE_WORKER_SCRIPT (worker.py by default).
   # Enabled with COMPOSE_PROFILES=worker in .env.
   worker:
-    image: ${TROYE_WORKER_IMAGE:-ghcr.io/kalfasyan/troye-worker:latest}
+    image: ${TROYE_WORKER_IMAGE:-ghcr.io/selfhostit/troye-worker:latest}
     command: [python, "${TROYE_WORKER_SCRIPT:-worker.py}"]
     profiles: [worker]
     restart: unless-stopped

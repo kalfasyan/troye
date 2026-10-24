@@ -9,7 +9,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 
-	"github.com/kalfasyan/troye/app"
+	"github.com/selfhostit/troye/app"
 )
 
 var planDay = time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)

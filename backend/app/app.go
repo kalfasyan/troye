@@ -10,10 +10,10 @@ import (
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/kalfasyan/troye/push"
+	"github.com/selfhostit/troye/push"
 )
 
-// Version is set at build time with -ldflags "-X github.com/kalfasyan/troye/app.Version=...".
+// Version is set at build time with -ldflags "-X github.com/selfhostit/troye/app.Version=...".
 var Version = "dev"
 
 // Config holds the settings that come from command-line flags.

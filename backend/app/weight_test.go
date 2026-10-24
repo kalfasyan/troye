@@ -9,7 +9,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 
-	"github.com/kalfasyan/troye/app"
+	"github.com/selfhostit/troye/app"
 )
 
 // addProfile saves an onboarded profile losing from 80 to 70 kg.

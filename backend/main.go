@@ -9,8 +9,8 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 
-	"github.com/kalfasyan/troye/app"
-	_ "github.com/kalfasyan/troye/migrations"
+	"github.com/selfhostit/troye/app"
+	_ "github.com/selfhostit/troye/migrations"
 )
 
 func main() {

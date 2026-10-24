@@ -28,7 +28,7 @@ The examples use port 8092; pick any port that no other app on the NAS uses.
 Sign in to the NAS from a computer: `ssh <your DSM user>@<NAS address>`. Then run:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/kalfasyan/troye/main/deploy/install.sh |
+curl -fsSL https://raw.githubusercontent.com/selfhostit/troye/main/deploy/install.sh |
   sudo PORT=8092 sh -s /volume1/docker/troye
 ```
 

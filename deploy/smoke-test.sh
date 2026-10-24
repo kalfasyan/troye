@@ -29,8 +29,8 @@ step() { echo "--- $*"; }
 cp "$here/docker-compose.yml" "$here/docker-compose.host.yml" "$dir/"
 mkdir "$dir/pb_data"
 cat >"$dir/.env" <<ENV
-TROYE_IMAGE=${TROYE_IMAGE:-ghcr.io/kalfasyan/troye:latest}
-TROYE_WORKER_IMAGE=${TROYE_WORKER_IMAGE:-ghcr.io/kalfasyan/troye-worker:latest}
+TROYE_IMAGE=${TROYE_IMAGE:-ghcr.io/selfhostit/troye:latest}
+TROYE_WORKER_IMAGE=${TROYE_WORKER_IMAGE:-ghcr.io/selfhostit/troye-worker:latest}
 PUID=$(id -u)
 PGID=$(id -g)
 PORT=$port

@@ -15,7 +15,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/types"
 
-	"github.com/kalfasyan/troye/push"
+	"github.com/selfhostit/troye/push"
 )
 
 // Photo logging. The phone queues a meal photo; the analyser (workers/analyser.py
