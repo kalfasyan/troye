@@ -13,6 +13,16 @@ class Diary {
 
   totals = $derived(sum(this.entries));
 
+  /** Adds or replaces an entry of the day shown; live updates may bring it first. */
+  private put(e: Entry) {
+    if (e.date !== this.day) return;
+    const old = this.entries.find((x) => x.id === e.id);
+    if (!e.expand && old?.expand) e.expand = old.expand;
+    this.entries = [...this.entries.filter((x) => x.id !== e.id), e].sort((a, b) =>
+      a.created.localeCompare(b.created),
+    );
+  }
+
   byMeal(meal: Meal) {
     return this.entries.filter((e) => e.meal === meal);
   }
@@ -62,7 +72,7 @@ class Diary {
         { user: session.user!.id, date: this.day, meal, food: food.id, grams },
         { expand: 'food' },
       );
-    this.entries = [...this.entries, e];
+    this.put(e);
     this.recent = [food, ...this.recent.filter((f) => f.id !== food.id)];
   }
 
@@ -74,12 +84,12 @@ class Diary {
       name,
       kcal,
     });
-    this.entries = [...this.entries, e];
+    this.put(e);
   }
 
   async update(entry: Entry, changes: Partial<Pick<Entry, 'grams' | 'meal' | 'kcal' | 'name'>>) {
     const e = await pb.collection('entries').update<Entry>(entry.id, changes, { expand: 'food' });
-    this.entries = this.entries.map((x) => (x.id === e.id ? e : x));
+    this.put(e);
   }
 
   /** Removes an entry and returns a function that puts it back. */
@@ -91,7 +101,7 @@ class Diary {
       const back = await pb
         .collection('entries')
         .create<Entry>({ user, date, meal, food, name, grams, kcal }, { expand: 'food' });
-      if (back.date === this.day) this.entries = [...this.entries, back];
+      this.put(back);
     };
   }
 
@@ -100,15 +110,8 @@ class Diary {
     return pb.collection('entries').subscribe<Entry>(
       '*',
       ({ action, record }) => {
-        if (record.date !== this.day) return;
-        const others = this.entries.filter((e) => e.id !== record.id);
-        if (action === 'delete') this.entries = others;
-        else {
-          // keep the expanded food we already have, if any
-          const old = this.entries.find((e) => e.id === record.id);
-          if (!record.expand && old?.expand) record.expand = old.expand;
-          this.entries = [...others, record].sort((a, b) => a.created.localeCompare(b.created));
-        }
+        if (action === 'delete') this.entries = this.entries.filter((e) => e.id !== record.id);
+        else this.put(record);
       },
       { expand: 'food' },
     );

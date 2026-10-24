@@ -19,6 +19,8 @@
   let results = $state<Food[]>([]);
   let searching = $state(false);
   let error = $state('');
+  // why the new-food form opened after a scan
+  let notice = $state('');
   let busy = $state(false);
 
   // the amount step
@@ -92,7 +94,7 @@
     try {
       pick(await lookupBarcode(code));
     } catch (err) {
-      error = errorMessage(err);
+      notice = errorMessage(err);
       custom = { ...custom, name: '' };
       barcode = code;
       view = 'custom';
@@ -260,7 +262,7 @@
     <form class="flex flex-1 flex-col gap-3" onsubmit={saveCustom}>
       {#if barcode}
         <p class="text-sm text-zinc-600 dark:text-zinc-400">
-          Copy the values from the label once, and the next scan of {barcode} finds it.
+          {notice} Copy the values from the label once, and the next scan of {barcode} finds it.
         </p>
       {/if}
       <label>Name <input required maxlength="200" bind:value={custom.name} /></label>

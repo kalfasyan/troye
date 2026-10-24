@@ -86,14 +86,6 @@ export function portions(
   return list;
 }
 
-/** The meal that fits the time of day, for the add button. */
-export function mealAt(hour: number): Meal {
-  if (hour < 11) return 'breakfast';
-  if (hour < 15) return 'lunch';
-  if (hour >= 17 && hour < 22) return 'dinner';
-  return 'snacks';
-}
-
 /** A day as YYYY-MM-DD in local time. */
 export function isoDay(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');

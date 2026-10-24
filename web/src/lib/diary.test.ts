@@ -3,7 +3,6 @@ import {
   addDays,
   amountOf,
   dayLabel,
-  mealAt,
   portions,
   recentFoods,
   sum,
@@ -53,14 +52,6 @@ describe('days', () => {
     expect(addDays('2026-03-01', -1)).toBe('2026-02-28');
     expect(dayLabel('2026-10-24', '2026-10-24')).toBe('Today');
     expect(dayLabel('2026-10-23', '2026-10-24')).toBe('Yesterday');
-  });
-
-  it('picks the meal for the time of day', () => {
-    expect(mealAt(8)).toBe('breakfast');
-    expect(mealAt(13)).toBe('lunch');
-    expect(mealAt(16)).toBe('snacks');
-    expect(mealAt(19)).toBe('dinner');
-    expect(mealAt(23)).toBe('snacks');
   });
 });
 
