@@ -2,24 +2,33 @@
   import { onMount } from 'svelte';
   import { addDays, dayLabel, isoDay, meals, type Entry, type Meal } from '../lib/diary';
   import { diary } from '../lib/diary.svelte';
+  import { kindLabel, type Exercise } from '../lib/extras';
+  import { extras } from '../lib/extras.svelte';
   import { errorMessage } from '../lib/pb';
   import type { MealPhoto } from '../lib/photos';
   import { photos } from '../lib/photos.svelte';
   import { profile } from '../lib/profile.svelte';
+  import AddExercise from './AddExercise.svelte';
   import AddFood from './AddFood.svelte';
   import EditEntry from './EditEntry.svelte';
+  import FastingCard from './FastingCard.svelte';
   import PhotoReview from './PhotoReview.svelte';
   import PhotoStrip from './PhotoStrip.svelte';
   import Ring from './Ring.svelte';
+  import WaterCard from './WaterCard.svelte';
+  import WeekSheet from './Week.svelte';
 
-  // The day's diary: the calorie ring, macros against their targets, and the
-  // meals with what was eaten. The arrows move between days.
+  // The day's diary: the calorie ring, macros against their targets, the
+  // fasting window, the meals with what was eaten, exercise and water. The
+  // arrows move between days.
 
   const plan = $derived(profile.current!);
   const today = isoDay(new Date());
   let adding = $state<Meal | null>(null);
   let editing = $state<Entry | null>(null);
   let reviewing = $state<MealPhoto | null>(null);
+  let exercising = $state<Exercise | 'new' | null>(null);
+  let showWeek = $state(false);
   let undo = $state<{ label: string; run: () => Promise<void> } | null>(null);
   let undoTimer: ReturnType<typeof setTimeout>;
 
@@ -28,15 +37,27 @@
     photos.load();
     openFromHash();
     addEventListener('hashchange', openFromHash);
-    const subscriptions = [diary.subscribe(), photos.subscribe()];
+    const subscriptions = [diary.subscribe(), photos.subscribe(), extras.subscribe()];
     return () => {
       removeEventListener('hashchange', openFromHash);
       for (const s of subscriptions) s.then((off) => off()).catch(() => {});
     };
   });
 
-  // a notification about a photo opens #photo/<id>
+  $effect(() => {
+    extras.show(diary.day).catch(() => (diary.error = "Couldn't load your water and exercise."));
+  });
+
+  // exercise adds to the day's budget
+  const budget = $derived(plan.calorie_budget + extras.burned);
+
+  // a notification about a photo opens #photo/<id>, the Monday one #week
   async function openFromHash() {
+    if (location.hash === '#week') {
+      history.replaceState(null, '', '#diary');
+      showWeek = true;
+      return;
+    }
     const id = location.hash.match(/^#photo\/(\w+)$/)?.[1];
     if (!id) return;
     history.replaceState(null, '', '#diary');
@@ -65,6 +86,18 @@
       const putBack = await diary.remove(entry);
       clearTimeout(undoTimer);
       undo = { label: `Removed ${entry.name}`, run: putBack };
+      undoTimer = setTimeout(() => (undo = null), 6000);
+    } catch (err) {
+      diary.error = errorMessage(err, "Couldn't remove it. Please try again.");
+    }
+  }
+
+  async function removedExercise(x: Exercise) {
+    exercising = null;
+    try {
+      const putBack = await extras.removeExercise(x);
+      clearTimeout(undoTimer);
+      undo = { label: `Removed ${kindLabel(x.kind).toLowerCase()}`, run: putBack };
       undoTimer = setTimeout(() => (undo = null), 6000);
     } catch (err) {
       diary.error = errorMessage(err, "Couldn't remove it. Please try again.");
@@ -115,7 +148,7 @@
 {/if}
 
 <section class="card">
-  <Ring eaten={diary.totals.kcal} budget={plan.calorie_budget} />
+  <Ring eaten={diary.totals.kcal} {budget} />
   <div class="mt-2 flex justify-center gap-6 text-sm text-zinc-500 dark:text-zinc-400">
     <span
       ><b class="text-zinc-900 tabular-nums dark:text-zinc-100"
@@ -123,10 +156,15 @@
       > eaten</span
     >
     <span
-      ><b class="text-zinc-900 tabular-nums dark:text-zinc-100"
-        >{plan.calorie_budget.toLocaleString()}</b
-      > budget</span
+      ><b class="text-zinc-900 tabular-nums dark:text-zinc-100">{budget.toLocaleString()}</b> budget</span
     >
+    {#if extras.burned}
+      <span
+        ><b class="text-zinc-900 tabular-nums dark:text-zinc-100"
+          >{extras.burned.toLocaleString()}</b
+        > exercise</span
+      >
+    {/if}
   </div>
   <div class="mt-5 grid grid-cols-3 gap-3 text-sm">
     {#each macros as m (m.label)}
@@ -147,6 +185,10 @@
     {/each}
   </div>
 </section>
+
+{#if diary.day === today && plan.fasting !== 'none'}
+  <FastingCard start={plan.eating_start} fasting={plan.fasting} />
+{/if}
 
 <PhotoStrip day={diary.day} onopen={(p) => (reviewing = p)} />
 
@@ -186,6 +228,43 @@
   </section>
 {/each}
 
+<section class="card p-0">
+  <header class="flex items-center justify-between px-5 pt-4 pb-2">
+    <h2 class="font-semibold">Exercise</h2>
+    <span class="text-sm text-zinc-500 tabular-nums dark:text-zinc-400">
+      {extras.burned ? `+${extras.burned}` : 0} kcal
+    </span>
+  </header>
+  {#if extras.exercises.length}
+    <ul class="divide-y divide-zinc-100 dark:divide-zinc-800">
+      {#each extras.exercises as x (x.id)}
+        <li>
+          <button
+            class="flex w-full items-center justify-between gap-3 px-5 py-2.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+            onclick={() => (exercising = x)}
+          >
+            <span class="min-w-0">
+              <span class="block truncate">{kindLabel(x.kind)}</span>
+              <span class="block truncate text-sm text-zinc-500 dark:text-zinc-400"
+                >{x.minutes} min{x.name ? ` · ${x.name}` : ''}</span
+              >
+            </span>
+            <span class="shrink-0 text-sm tabular-nums">{x.kcal}</span>
+          </button>
+        </li>
+      {/each}
+    </ul>
+  {/if}
+  <button
+    class="w-full rounded-b-2xl px-5 py-3 text-left text-sm font-semibold text-brand-600 hover:bg-zinc-50 dark:text-brand-400 dark:hover:bg-zinc-800/50"
+    onclick={() => (exercising = 'new')}>+ Add exercise</button
+  >
+</section>
+
+<WaterCard onerror={(m) => (diary.error = m)} />
+
+<button class="btn-secondary" onclick={() => (showWeek = true)}>See your week</button>
+
 {#if undo}
   <div
     class="fixed inset-x-4 bottom-24 z-10 mx-auto flex max-w-md items-center justify-between gap-4 rounded-xl bg-zinc-900 px-4 py-3 text-sm text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900"
@@ -203,6 +282,16 @@
 {/if}
 {#if reviewing}
   <PhotoReview photo={reviewing} onclose={() => (reviewing = null)} />
+{/if}
+{#if exercising}
+  <AddExercise
+    editing={exercising === 'new' ? null : exercising}
+    onclose={() => (exercising = null)}
+    onremove={removedExercise}
+  />
+{/if}
+{#if showWeek}
+  <WeekSheet units={plan.units} onclose={() => (showWeek = false)} />
 {/if}
 {#if editing}
   <EditEntry entry={editing} onclose={() => (editing = null)} onremove={removed} />
