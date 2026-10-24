@@ -85,7 +85,7 @@ export const motivations: { id: Motivation; label: string; emoji: string }[] = [
   { id: 'fitness', label: 'Get fitter', emoji: '🏃' },
   { id: 'event', label: 'An event coming up', emoji: '📅' },
   { id: 'mood', label: 'Better mood', emoji: '🌤️' },
-  { id: 'family', label: 'For my family', emoji: '👨‍👩‍👧' },
+  { id: 'family', label: 'For my loved ones', emoji: '🐾' },
   { id: 'longevity', label: 'Live longer', emoji: '🌱' },
 ];
 

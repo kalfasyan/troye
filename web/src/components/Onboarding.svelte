@@ -283,7 +283,7 @@
           rows="3"
           maxlength="500"
           bind:value={a.why}
-          placeholder="I want to keep up with my kids on our hikes"></textarea>
+          placeholder="I want long hikes with my dog to feel easy"></textarea>
       </label>
       <p class="text-sm text-zinc-500 dark:text-zinc-400">
         I'll remind you of this on the hard days.
