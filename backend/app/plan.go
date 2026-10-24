@@ -178,10 +178,21 @@ func planInput(r *core.Record) PlanInput {
 	}
 }
 
+// GoalReached tells whether the weight has got to the goal weight.
+func GoalReached(in PlanInput) bool {
+	return in.Goal == "lose" && in.WeightKg <= in.GoalWeightKg ||
+		in.Goal == "gain" && in.WeightKg >= in.GoalWeightKg
+}
+
 // storePlan sets a profile's targets from its answers, or clears them while
-// the answers are incomplete.
+// the answers are incomplete. Once a weigh-in reaches the goal, the budget
+// becomes the one for staying there, until a new goal is set.
 func storePlan(r *core.Record) {
-	p, err := ComputePlan(planInput(r), time.Now())
+	in := planInput(r)
+	if in.WeightKg > 0 && GoalReached(in) {
+		in.Goal = "maintain"
+	}
+	p, err := ComputePlan(in, time.Now())
 	if err != nil {
 		p = Plan{}
 	}
