@@ -10,10 +10,10 @@ import (
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/kalfasyan/plasto/push"
+	"github.com/kalfasyan/troye/push"
 )
 
-// Version is set at build time with -ldflags "-X github.com/kalfasyan/plasto/app.Version=...".
+// Version is set at build time with -ldflags "-X github.com/kalfasyan/troye/app.Version=...".
 var Version = "dev"
 
 // Config holds the settings that come from command-line flags.
@@ -27,7 +27,7 @@ func Register(app core.App, cfg Config) {
 	// scheduled jobs and backups follow the server's time zone (TZ)
 	app.Cron().SetTimezone(time.Local)
 
-	registerDemo(app) // DEMO
+	registerPlan(app)
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.GET("/api/app/info", info)

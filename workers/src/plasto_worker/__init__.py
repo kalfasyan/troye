@@ -1,8 +1,8 @@
-"""Write Python workers that talk to a plasto app.
+"""Write Python workers that talk to a troye app.
 
 from plasto_worker import Client, every
 
-app = Client()  # reads PLASTO_URL, PLASTO_WORKER and PLASTO_WORKER_PASSWORD
+app = Client()  # reads TROYE_URL, TROYE_WORKER and TROYE_WORKER_PASSWORD
 
 def check():
     app.create("items", {"title": "Hello"})

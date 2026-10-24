@@ -1,9 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { errorMessage, pb } from './lib/pb';
+  import { profile } from './lib/profile.svelte';
   import { session } from './lib/session.svelte';
   import Home from './components/Home.svelte';
   import Login from './components/Login.svelte';
+  import Onboarding from './components/Onboarding.svelte';
   import Setup from './components/Setup.svelte';
 
   // Signed-out visitors see the setup screen on a new install, the sign-in form otherwise.
@@ -24,10 +26,26 @@
     if (session.user) session.refresh();
     else checkSetup();
   });
+
+  // after sign-in, people who haven't done the interview yet start there
+  $effect(() => {
+    if (session.user && !profile.loaded) profile.load();
+  });
 </script>
 
 {#if session.user}
-  <Home />
+  {#if profile.error}
+    <main class="mx-auto flex min-h-dvh max-w-sm flex-col items-center justify-center gap-4 px-6">
+      <p class="text-center" role="alert">{profile.error}</p>
+      <button class="btn-secondary" onclick={() => profile.load()}>Try again</button>
+    </main>
+  {:else if profile.loaded}
+    {#if profile.onboarded}
+      <Home />
+    {:else}
+      <Onboarding />
+    {/if}
+  {/if}
 {:else if error}
   <main class="mx-auto flex min-h-dvh max-w-sm flex-col items-center justify-center gap-4 px-6">
     <p class="text-center" role="alert">{error}</p>

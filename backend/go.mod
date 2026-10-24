@@ -1,4 +1,4 @@
-module github.com/kalfasyan/plasto
+module github.com/kalfasyan/troye
 
 go 1.27
 

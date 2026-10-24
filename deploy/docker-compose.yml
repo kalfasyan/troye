@@ -4,7 +4,7 @@
 
 services:
   app:
-    image: ${PLASTO_IMAGE:-ghcr.io/kalfasyan/plasto:latest}
+    image: ${TROYE_IMAGE:-ghcr.io/kalfasyan/troye:latest}
     restart: unless-stopped
     # Run as the owner of ./pb_data, so the data folder stays yours (and a NAS user's).
     user: ${PUID:-1000}:${PGID:-1000}
@@ -15,20 +15,20 @@ services:
       - ./pb_data:/app/pb_data
     environment:
       TZ: ${TZ:-UTC}
-      PLASTO_PUSH_CONTACT: ${PLASTO_PUSH_CONTACT:-}
+      TROYE_PUSH_CONTACT: ${TROYE_PUSH_CONTACT:-}
     mem_limit: 512m
 
-  # Runs one of the workers in workers/, PLASTO_WORKER_SCRIPT (worker.py by default).
+  # Runs one of the workers in workers/, TROYE_WORKER_SCRIPT (worker.py by default).
   # Enabled with COMPOSE_PROFILES=worker in .env.
   worker:
-    image: ${PLASTO_WORKER_IMAGE:-ghcr.io/kalfasyan/plasto-worker:latest}
-    command: [python, "${PLASTO_WORKER_SCRIPT:-worker.py}"]
+    image: ${TROYE_WORKER_IMAGE:-ghcr.io/kalfasyan/troye-worker:latest}
+    command: [python, "${TROYE_WORKER_SCRIPT:-worker.py}"]
     profiles: [worker]
     restart: unless-stopped
     depends_on: [app]
     environment:
       TZ: ${TZ:-UTC}
-      PLASTO_URL: http://app:8090
-      PLASTO_WORKER: ${PLASTO_WORKER:-}
-      PLASTO_WORKER_PASSWORD: ${PLASTO_WORKER_PASSWORD:-}
+      TROYE_URL: http://app:8090
+      TROYE_WORKER: ${TROYE_WORKER:-}
+      TROYE_WORKER_PASSWORD: ${TROYE_WORKER_PASSWORD:-}
     mem_limit: 256m

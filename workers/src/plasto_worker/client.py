@@ -1,4 +1,4 @@
-"""A small client for the plasto API, signed in as a worker account."""
+"""A small client for the troye API, signed in as a worker account."""
 
 from __future__ import annotations
 
@@ -27,10 +27,10 @@ class ApiError(Exception):
 
 
 class Client:
-    """Talks to a plasto app as a worker.
+    """Talks to a troye app as a worker.
 
-    Settings come from the arguments or from the PLASTO_URL, PLASTO_WORKER and
-    PLASTO_WORKER_PASSWORD environment variables. The client signs in on first
+    Settings come from the arguments or from the TROYE_URL, TROYE_WORKER and
+    TROYE_WORKER_PASSWORD environment variables. The client signs in on first
     use, signs in again when its token expires, and retries while the server is
     unreachable (for example during an update).
     """
@@ -45,12 +45,12 @@ class Client:
         timeout: float = 30,
     ):
         env = os.environ.get
-        self.url = (url or env("PLASTO_URL") or "http://127.0.0.1:8090").rstrip("/")
-        self.name = name or env("PLASTO_WORKER", "")
-        self.password = password or env("PLASTO_WORKER_PASSWORD", "")
+        self.url = (url or env("TROYE_URL") or "http://127.0.0.1:8090").rstrip("/")
+        self.name = name or env("TROYE_WORKER", "")
+        self.password = password or env("TROYE_WORKER_PASSWORD", "")
         if not self.name or not self.password:
             raise ValueError(
-                "Set PLASTO_WORKER and PLASTO_WORKER_PASSWORD to a worker account's name "
+                "Set TROYE_WORKER and TROYE_WORKER_PASSWORD to a worker account's name "
                 "and password."
             )
         self.retries = retries

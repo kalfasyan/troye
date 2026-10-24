@@ -17,7 +17,7 @@ COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 COPY backend/ ./
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOARM=${TARGETVARIANT#v} \
-    go build -trimpath -ldflags="-s -w -X github.com/kalfasyan/plasto/app.Version=$VERSION" -o /plasto .
+    go build -trimpath -ldflags="-s -w -X github.com/kalfasyan/troye/app.Version=$VERSION" -o /troye .
 
 # --- runtime ---
 FROM alpine:3.24
@@ -25,10 +25,10 @@ RUN apk add --no-cache ca-certificates tzdata \
     && adduser -D -u 1000 app \
     && mkdir -p /app/pb_data && chown app:app /app/pb_data
 WORKDIR /app
-COPY --from=backend /plasto /app/plasto
+COPY --from=backend /troye /app/troye
 COPY --from=web /web/dist /app/pb_public
 USER app
 VOLUME /app/pb_data
 EXPOSE 8090
 HEALTHCHECK --interval=60s --timeout=5s CMD wget -qO- http://127.0.0.1:8090/api/health || exit 1
-CMD ["/app/plasto", "serve", "--http=0.0.0.0:8090", "--dir=/app/pb_data", "--publicDir=/app/pb_public"]
+CMD ["/app/troye", "serve", "--http=0.0.0.0:8090", "--dir=/app/pb_data", "--publicDir=/app/pb_public"]

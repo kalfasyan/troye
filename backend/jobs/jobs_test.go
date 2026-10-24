@@ -10,7 +10,7 @@ import (
 	"github.com/pocketbase/pocketbase/tests"
 	"github.com/pocketbase/pocketbase/tools/cron"
 
-	_ "github.com/kalfasyan/plasto/migrations"
+	_ "github.com/kalfasyan/troye/migrations"
 )
 
 func mustSchedule(t *testing.T, expr string) *cron.Schedule {

@@ -2,48 +2,19 @@
 
 <img src="web/public/icons/icon.svg" width="88" alt="">
 
-# plasto
+# Troye
 
-**A template for self-hosted apps: from an idea to an app on your phone,<br>
-running in one small container on your own hardware.**
-
-[![CI](https://github.com/kalfasyan/plasto/actions/workflows/ci.yml/badge.svg)](https://github.com/kalfasyan/plasto/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/github/license/kalfasyan/plasto)](LICENSE)
-[![Go](https://img.shields.io/github/go-mod/go-version/kalfasyan/plasto?filename=backend%2Fgo.mod&logo=go&logoColor=white)](backend/go.mod)
-[![PocketBase](https://img.shields.io/badge/PocketBase-0.40-b8dbe4?logo=pocketbase&logoColor=black)](https://pocketbase.io)
-[![Svelte 5](https://img.shields.io/badge/Svelte-5-ff3e00?logo=svelte&logoColor=white)](https://svelte.dev)
-[![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-[![Python workers](https://img.shields.io/badge/workers-Python_3.12+-3776ab?logo=python&logoColor=white)](workers/README.md)
-[![Docker images](https://img.shields.io/badge/ghcr.io-amd64_%7C_arm64_%7C_armv7-2496ed?logo=docker&logoColor=white)](https://github.com/kalfasyan?tab=packages&repo_name=plasto)
-
-[![Use this template](https://img.shields.io/badge/Use_this_template-2ea44f?style=for-the-badge&logo=github)](https://github.com/kalfasyan/plasto/generate)
-[![Buy me a coffee](https://img.shields.io/badge/Buy_me_a_coffee-ffdd00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/kalfasyan)
-
-<img src="docs/images/setup.png" width="230" alt="The first-run screen, where the first person creates the owner account">&nbsp;
-<img src="docs/images/home-light.png" width="230" alt="The home screen with the live demo list, in light mode">&nbsp;
-<img src="docs/images/home-dark.png" width="230" alt="The same home screen in dark mode">
+**A private calorie and weight tracker that runs on your own hardware.**
 
 </div>
 
-plasto gives every new app the parts that keep getting rebuilt: sign-in and roles,
-a database with an admin UI, push notifications, scheduled jobs, backups, Python
-workers and a one-command deploy. You add your own idea on top.
+Troye is a self-hosted calorie counter: an onboarding interview sets your daily
+calorie budget from your goal, you log food by search, barcode or photo, and you
+follow your weight on a trend chart. Photos are analysed by a vision model on
+your own GPU PC, never by a cloud service, and every photo and log stays at home.
 
-It is built on [PocketBase](https://pocketbase.io) (Go, SQLite, auth, realtime,
-admin UI) and [Svelte 5](https://svelte.dev) with
-[Tailwind](https://tailwindcss.com). See [docs/decisions.md](docs/decisions.md)
-for why.
-
-<!-- TEMPLATE start (rename.sh removes this section from new apps) -->
-## Start a new app
-
-1. On GitHub, click **Use this template** and create your app's repository.
-2. Clone it and run `scripts/rename.sh`: plasto becomes your repository's name in
-   the code, images, env vars and docs.
-3. Run `scripts/strip-demo.sh` to remove the demo, or keep it as a reference for now.
-4. Follow [Build your first feature](docs/first-feature.md).
-
-<!-- TEMPLATE end -->
+It is a work in progress; [docs/plan.md](docs/plan.md) has the architecture and
+the build plan. Troye is built on [plasto](https://github.com/kalfasyan/plasto).
 
 ## Quick start
 
@@ -78,11 +49,6 @@ email and password. Add more people there, in the `users` collection.
 - **Python workers** for the heavy lifting (ML, scraping, LLMs), on this machine or
   another. They sign in with a worker account and read and write records through
   the API; see [workers/README.md](workers/README.md).
-<!-- DEMO start -->
-- **A demo** that uses every piece: a live items list on the home screen, a worker
-  that adds to it, and a push notification for each new item.
-  `scripts/strip-demo.sh` removes it.
-<!-- DEMO end -->
 - **An installable app.** It installs to a phone's home screen or a desktop, opens
   offline from its cached shell, and follows the system's light or dark mode.
 
@@ -113,11 +79,11 @@ those records and notify people.
 On any Linux machine with Docker (a NAS, a Raspberry Pi, a server):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/kalfasyan/plasto/main/deploy/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/kalfasyan/troye/main/deploy/install.sh | sh
 ```
 
 It asks for a Tailscale auth key, so your devices reach the app at
-`https://plasto.<your-tailnet>.ts.net`, and starts it with Docker Compose. See
+`https://troye.<your-tailnet>.ts.net`, and starts it with Docker Compose. See
 [docs/deploy.md](docs/deploy.md) for updates, backups, workers, Synology and the Pi.
 
 ## Layout
@@ -136,7 +102,7 @@ web/                Svelte 5 + Tailwind web app
   public/           manifest, service worker and icons
 workers/            Python worker kit, your workers, their tests and image
 deploy/             compose files, Tailscale sidecar, install script, smoke test
-docs/               decisions, the deploy guide and the first-feature guide
+docs/               the plan, the deploy guide and the first-feature guide
 Dockerfile          the app's multi-arch image
 Makefile            run `make` to see every command
 ```
@@ -148,17 +114,17 @@ Makefile            run `make` to see every command
 | `make dev`   | Run everything with live reload                       |
 | `make check` | Format, lint and type-check                           |
 | `make test`  | Run the Go, web and worker tests                      |
-| `make build` | Build `dist/plasto` with the web app next to it       |
+| `make build` | Build `dist/troye` with the web app next to it       |
 | `make run`   | Build the Docker image and run it on :8090            |
 | `make smoke` | Deploy both images with Compose and test end to end   |
 
-Pushes to `main` publish `ghcr.io/kalfasyan/plasto` and
-`ghcr.io/kalfasyan/plasto-worker` for amd64, arm64 and armv7; a `v*` tag
+Pushes to `main` publish `ghcr.io/kalfasyan/troye` and
+`ghcr.io/kalfasyan/troye-worker` for amd64, arm64 and armv7; a `v*` tag
 publishes that version.
 
 ## Support
 
-If plasto saves you time, you can [buy me a coffee](https://buymeacoffee.com/kalfasyan).
+If troye saves you time, you can [buy me a coffee](https://buymeacoffee.com/kalfasyan).
 
 ## License
 

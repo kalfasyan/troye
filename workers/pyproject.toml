@@ -1,7 +1,7 @@
 [project]
-name = "plasto-worker"
+name = "troye-worker"
 version = "0.1.0"
-description = "Write Python workers that talk to a plasto app"
+description = "Write Python workers that talk to a troye app"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = ["httpx>=0.28"]

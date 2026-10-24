@@ -1,6 +1,6 @@
 """Your worker: put the work in run() and it runs every minute, with a heartbeat.
 
-    PLASTO_WORKER=... PLASTO_WORKER_PASSWORD=... uv run python worker.py
+    TROYE_WORKER=... TROYE_WORKER_PASSWORD=... uv run python worker.py
 
 See README.md for what the client can do, and demo.py for a worker that writes records.
 """
