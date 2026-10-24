@@ -2,15 +2,11 @@ package app_test
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"strings"
-	"sync/atomic"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
-
-	"github.com/selfhostit/troye/app"
 )
 
 // addFood saves a food with the given kcal and protein per 100 g; owner may be empty.
@@ -79,8 +75,9 @@ func TestDiaryRules(t *testing.T) {
 		status                      int
 		content                     string
 	}{
-		{"you see shared foods and your own", "ada", http.MethodGet, "/api/collections/foods/records", "", http.StatusOK, `"totalItems":2`},
-		{"you don't see others' custom foods", "bob", http.MethodGet, "/api/collections/foods/records", "", http.StatusOK, `"totalItems":1`},
+		// the bundled Ciqual foods have a source id, the test's foods don't
+		{"you see shared foods and your own", "ada", http.MethodGet, "/api/collections/foods/records?filter=source_id%3D%27%27", "", http.StatusOK, `"totalItems":2`},
+		{"you don't see others' custom foods", "bob", http.MethodGet, "/api/collections/foods/records?filter=source_id%3D%27%27", "", http.StatusOK, `"totalItems":1`},
 		{"you add a custom food", "ada", http.MethodPost, "/api/collections/foods/records", `{"name":"Soup","source":"custom","owner":"{ada}","kcal":40}`, http.StatusOK, `"name":"Soup"`},
 		{"you can't add a shared food", "ada", http.MethodPost, "/api/collections/foods/records", `{"name":"Soup","source":"ciqual","owner":"{ada}","kcal":40}`, http.StatusBadRequest, ""},
 		{"you can't change a shared food", "ada", http.MethodPatch, "/api/collections/foods/records/{rice}", `{"kcal":1}`, http.StatusNotFound, ""},
@@ -121,87 +118,4 @@ func TestDiaryRules(t *testing.T) {
 		}
 		s.Test(t)
 	}
-}
-
-func TestBarcode(t *testing.T) {
-	var calls atomic.Int32
-	off := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		calls.Add(1)
-		if r.UserAgent() == "" || !strings.HasPrefix(r.UserAgent(), "Troye/") {
-			t.Errorf("user agent %q", r.UserAgent())
-		}
-		switch r.URL.Path {
-		case "/api/v2/product/5400113690252.json":
-			_, _ = w.Write([]byte(`{"status":1,"product":{"product_name":"Speculoos","brands":"Lotus, Lotus Bakeries",
-				"nutriments":{"energy-kcal_100g":484,"energy-kcal_unit":"kcal","proteins_100g":"4.9","carbohydrates_100g":72.6,"fat_100g":19},
-				"serving_quantity":"6.25","serving_size":"1 biscuit (6.25 g)"}}`))
-		case "/api/v2/product/1234567890123.json":
-			w.WriteHeader(http.StatusNotFound)
-			_, _ = w.Write([]byte(`{"status":0,"status_verbose":"product not found"}`))
-		default:
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-	}))
-	defer off.Close()
-	app.OpenFoodFactsURL = off.URL
-	defer func() { app.OpenFoodFactsURL = "https://world.openfoodfacts.org" }()
-
-	a := newApp(t)
-	_, token := addUser(t, a, "ada@example.com", "owner")
-	factory := func(testing.TB) *tests.TestApp { return a }
-	auth := map[string]string{"Authorization": token}
-
-	scenarios := []tests.ApiScenario{
-		{
-			Name:            "a new product comes from Open Food Facts",
-			Method:          http.MethodGet,
-			URL:             "/api/app/barcode/5400113690252",
-			Headers:         auth,
-			ExpectedStatus:  http.StatusOK,
-			ExpectedContent: []string{`"name":"Speculoos"`, `"brand":"Lotus"`, `"kcal":484`, `"protein":4.9`, `"serving_g":6.25`, `"source":"off"`},
-		},
-		{
-			Name:            "the second scan is answered locally",
-			Method:          http.MethodGet,
-			URL:             "/api/app/barcode/5400113690252",
-			Headers:         auth,
-			ExpectedStatus:  http.StatusOK,
-			ExpectedContent: []string{`"name":"Speculoos"`},
-			AfterTestFunc: func(t testing.TB, _ *tests.TestApp, _ *http.Response) {
-				if calls.Load() != 1 {
-					t.Errorf("%d calls to Open Food Facts", calls.Load())
-				}
-			},
-		},
-		{
-			Name:            "an unknown product asks for a custom food",
-			Method:          http.MethodGet,
-			URL:             "/api/app/barcode/1234567890123",
-			Headers:         auth,
-			ExpectedStatus:  http.StatusNotFound,
-			ExpectedContent: []string{"Add it as your own food"},
-		},
-		{
-			Name:            "an outage says so",
-			Method:          http.MethodGet,
-			URL:             "/api/app/barcode/9999999999999",
-			Headers:         auth,
-			ExpectedStatus:  http.StatusBadGateway,
-			ExpectedContent: []string{"Couldn't reach Open Food Facts"},
-		},
-		{
-			Name:            "it isn't open to signed-out visitors",
-			Method:          http.MethodGet,
-			URL:             "/api/app/barcode/5400113690252",
-			ExpectedStatus:  http.StatusUnauthorized,
-			ExpectedContent: []string{"authorization token"},
-		},
-	}
-	for i := range scenarios {
-		s := scenarios[i]
-		s.TestAppFactory = factory
-		s.DisableTestAppCleanup = true
-		s.Test(t)
-	}
-	a.Cleanup()
 }

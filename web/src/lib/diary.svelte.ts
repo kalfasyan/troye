@@ -120,23 +120,16 @@ class Diary {
 
 export const diary = new Diary();
 
-/** Finds foods by name or brand: your own first, then the shared tables. */
-export async function searchFoods(q: string): Promise<Food[]> {
-  const words = q.trim().split(/\s+/).filter(Boolean).slice(0, 4);
-  if (!words.length) return [];
-  const params: Record<string, string> = {};
-  const filter = words
-    .map((w, i) => {
-      params[`w${i}`] = w;
-      return `(name ~ {:w${i}} || brand ~ {:w${i}})`;
-    })
-    .join(' && ');
-  const list = await pb.collection('foods').getList<Food>(1, 30, {
-    filter: pb.filter(filter, params),
-    sort: '-owner,name',
+/**
+ * Finds foods by any of their names (English, Dutch or French) or brand, best
+ * first: what you log often, your own foods, then the food tables and products.
+ */
+export function searchFoods(q: string): Promise<Food[]> {
+  if (!q.trim()) return Promise.resolve([]);
+  return pb.send<Food[]>('/api/app/foods/search', {
+    query: { q, limit: 30 },
     requestKey: 'food-search',
   });
-  return list.items;
 }
 
 /** Looks a barcode up on the server, which asks Open Food Facts the first time. */
