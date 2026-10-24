@@ -36,10 +36,27 @@ a draft (items, grams, confidence, matched foods), and a Go hook sends a push.
 Photos stay in `pb_data`, deduplicated by hash; originals are downscaled after a
 retention period.
 
+The analyser on the GPU PC starts on boot and checks in with the NAS every
+minute, so the app shows whether it is on and how many photos wait. When it
+comes online it works through the queue and each person gets a push as their
+meals are ready. When it is off, a Wake PC button has the NAS send a
+Wake-on-LAN packet. Logging never waits on it: search and barcode work at once.
+
+The app is for a household: each person has their own account, and their diary,
+photos, weigh-ins and plan are visible only to them.
+
 ## Nutrition data
 
-- USDA FoodData Central (public domain), bundled: generic foods with portions.
-- Open Food Facts: packaged foods by barcode, cached after the first lookup.
+Tuned for shopping in Belgium, so European tables come first:
+
+- Ciqual (ANSES, France): about 3,500 generic foods with French and English names,
+  under the Open Licence, so it ships with the app.
+- NEVO (RIVM, Netherlands): about 2,300 Dutch and Flemish foods. It is free but
+  can't be redistributed, so you download it once and Troye imports it, citing
+  "NEVO-online version 2025/9.0, RIVM, Bilthoven".
+- Open Food Facts: packaged foods by barcode, including supermarket own brands;
+  Belgian and Dutch products are kept locally so lookups work offline.
+- USDA FoodData Central (public domain): a broad fallback with standard portions.
 - The person's own foods and recipes.
 
 ## Onboarding and budget
@@ -56,7 +73,7 @@ Each step is one PR that leaves the app working.
 
 1. Turn the template into Troye: rename and remove the demo (branding comes separately).
 2. Profile and onboarding interview, with the budget calculation.
-3. Food diary: USDA foods, search, recents, custom foods, barcode lookup.
+3. Food diary: Ciqual and NEVO foods, search, recents, custom foods, barcode lookup.
 4. Weight tracking and its charts (hand-drawn SVG, no chart library).
 5. Photo logging: capture, storage, queue, the Ollama vision worker, confirm screen, push.
 6. Accuracy loop: score models on confirmed photos, so the model is picked by numbers.
