@@ -24,7 +24,7 @@
 </script>
 
 <main class="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-6 py-10">
-  <Brand title="plasto" subtitle="Sign in to continue." />
+  <Brand title="Troye" subtitle="Sign in to continue." />
   <form class="flex flex-col gap-4" onsubmit={submit}>
     <label>Email <input type="email" autocomplete="username" bind:value={email} required /></label>
     <label>

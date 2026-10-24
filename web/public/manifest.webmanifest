@@ -1,7 +1,7 @@
 {
-  "name": "plasto",
-  "short_name": "plasto",
-  "description": "A self-hosted app built on plasto",
+  "name": "Troye",
+  "short_name": "Troye",
+  "description": "A private calorie and weight tracker",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

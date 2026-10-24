@@ -3,8 +3,8 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-cmd = "go build -o ./tmp/plasto ."
-entrypoint = ["./tmp/plasto", "serve", "--dev", "--http=127.0.0.1:8090", "--dir=../pb_data", "--publicDir=../web/dist"]
+cmd = "go build -o ./tmp/troye ."
+entrypoint = ["./tmp/troye", "serve", "--dev", "--http=127.0.0.1:8090", "--dir=../pb_data", "--publicDir=../web/dist"]
 include_ext = ["go"]
 exclude_dir = ["tmp", "pb_data"]
 exclude_regex = ["_test\\.go"]

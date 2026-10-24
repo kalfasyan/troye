@@ -1,6 +1,6 @@
 # The worker image: the plasto_worker kit, its locked dependencies and the
 # workers in this folder. It runs worker.py unless you give it another command:
-#   docker run ... ghcr.io/kalfasyan/plasto-worker python my_worker.py
+#   docker run ... ghcr.io/kalfasyan/troye-worker python my_worker.py
 
 # --- build: resolve the locked dependencies and build the kit's wheel ---
 FROM --platform=$BUILDPLATFORM python:3.15-slim AS build

@@ -16,22 +16,6 @@ working.
 | 6 | Tests | `backend/app/tasks_test.go`, `workers/tests/test_rain.py` |
 | 7 | Ship it | |
 
-<!-- TEMPLATE start -->
-## 0. Start the app
-
-On GitHub, open plasto and click **Use this template**, then:
-
-```sh
-git clone git@github.com:you/chores.git && cd chores
-scripts/rename.sh        # plasto becomes "chores", from the repository's name
-scripts/strip-demo.sh    # removes the demo items list
-make setup && make dev   # open http://localhost:5173 and create your account
-```
-
-Commit after each script, so `git diff` shows only your own work from then on.
-
-<!-- TEMPLATE end -->
-
 ## 1. The data
 
 Collections are defined in Go migrations, so every copy of the app (your laptop,
@@ -214,7 +198,7 @@ package app
 import (
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/kalfasyan/plasto/push"
+	"github.com/kalfasyan/troye/push"
 )
 
 func registerTasks(app core.App) {
@@ -271,7 +255,7 @@ collection), and runs a job once at startup if the server was off when it was du
 	})
 ```
 
-with `"fmt"`, `"github.com/pocketbase/dbx"` and `"github.com/kalfasyan/plasto/jobs"`
+with `"fmt"`, `"github.com/pocketbase/dbx"` and `"github.com/kalfasyan/troye/jobs"`
 added to the imports.
 
 ## 5. A worker
@@ -325,7 +309,7 @@ password) and run it:
 
 ```sh
 cd workers
-PLASTO_URL=http://localhost:8090 PLASTO_WORKER=rain PLASTO_WORKER_PASSWORD=... uv run python rain.py
+TROYE_URL=http://localhost:8090 TROYE_WORKER=rain TROYE_WORKER_PASSWORD=... uv run python rain.py
 ```
 
 Add Python libraries with `uv add <package>`; they go into the worker image too.
@@ -412,7 +396,7 @@ them with Docker Compose for a smoke test. When you merge, it publishes the imag
 Then, on the server:
 
 ```sh
-cd ~/plasto && docker compose pull && docker compose up -d
+cd ~/troye && docker compose pull && docker compose up -d
 ```
 
 The new migration runs when the app starts. To run the rain worker there, create
@@ -421,9 +405,9 @@ again:
 
 ```sh
 COMPOSE_PROFILES=worker
-PLASTO_WORKER=rain
-PLASTO_WORKER_PASSWORD=...
-PLASTO_WORKER_SCRIPT=rain.py
+TROYE_WORKER=rain
+TROYE_WORKER_PASSWORD=...
+TROYE_WORKER_SCRIPT=rain.py
 ```
 
 See [deploy.md](deploy.md) for the rest.

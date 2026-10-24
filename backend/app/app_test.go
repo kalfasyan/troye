@@ -6,7 +6,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/tests"
 
-	"github.com/kalfasyan/plasto/app"
+	"github.com/kalfasyan/troye/app"
 )
 
 func TestRoutes(t *testing.T) {
@@ -33,7 +33,7 @@ func TestRoutes(t *testing.T) {
 			Method:          http.MethodGet,
 			URL:             "/some/client/route",
 			ExpectedStatus:  http.StatusOK,
-			ExpectedContent: []string{"plasto test page"},
+			ExpectedContent: []string{"troye test page"},
 			TestAppFactory:  setup,
 		},
 	}

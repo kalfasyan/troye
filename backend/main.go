@@ -1,4 +1,4 @@
-// Command plasto runs the app: the PocketBase API, the database and the web
+// Command troye runs the app: the PocketBase API, the database and the web
 // app built into ./pb_public, in one process.
 package main
 
@@ -9,8 +9,8 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 
-	"github.com/kalfasyan/plasto/app"
-	_ "github.com/kalfasyan/plasto/migrations"
+	"github.com/kalfasyan/troye/app"
+	_ "github.com/kalfasyan/troye/migrations"
 )
 
 func main() {

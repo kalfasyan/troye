@@ -90,5 +90,5 @@ def test_sse_parser():
 
 
 def test_settings_are_required():
-    with pytest.raises(ValueError, match="PLASTO_WORKER"):
+    with pytest.raises(ValueError, match="TROYE_WORKER"):
         Client("http://127.0.0.1:1", name="", password="")
