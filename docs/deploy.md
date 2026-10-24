@@ -13,7 +13,7 @@ anything to the internet.
 ```
 
 Every push to `main` publishes two images for amd64, arm64 and armv7:
-`ghcr.io/kalfasyan/troye` (the app) and `ghcr.io/kalfasyan/troye-worker` (the
+`ghcr.io/selfhostit/troye` (the app) and `ghcr.io/selfhostit/troye-worker` (the
 Python workers). A tag like `v1.2.0` publishes `:v1.2.0` of both.
 
 ## Install
@@ -21,7 +21,7 @@ Python workers). A tag like `v1.2.0` publishes `:v1.2.0` of both.
 On the machine, as a user that can run `docker`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/kalfasyan/troye/main/deploy/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/selfhostit/troye/main/deploy/install.sh | sh
 ```
 
 This creates `~/troye` with the compose files, a `.env` and a `pb_data` folder
@@ -60,7 +60,7 @@ cd ~/troye && docker compose pull && docker compose up -d
 
 Running the install script again does the same and also refreshes the compose
 files. To stay on a release, or go back to one, set `TROYE_IMAGE` (and
-`TROYE_WORKER_IMAGE`) in `.env` to a tag, like `ghcr.io/kalfasyan/troye:v1.2.0`.
+`TROYE_WORKER_IMAGE`) in `.env` to a tag, like `ghcr.io/selfhostit/troye:v1.2.0`.
 Database migrations run on start, so take a backup before going back across one.
 
 ## Backups and restore
@@ -97,7 +97,7 @@ address:
 docker run -d --name worker --restart unless-stopped \
   -e TROYE_URL=https://troye.<your-tailnet>.ts.net \
   -e TROYE_WORKER=camera -e TROYE_WORKER_PASSWORD=... -e TZ=Europe/Athens \
-  ghcr.io/kalfasyan/troye-worker python camera.py
+  ghcr.io/selfhostit/troye-worker python camera.py
 ```
 
 ## The photo analyser (GPU PC)
@@ -115,7 +115,7 @@ Meal photos wait on the app until the GPU PC analyses them with a vision model i
      -e TROYE_URL=https://troye.<name>.synology.me \
      -e TROYE_WORKER=analyser -e TROYE_WORKER_PASSWORD=... \
      -e OLLAMA_URL=http://127.0.0.1:11434 -e TZ=Europe/Brussels \
-     ghcr.io/kalfasyan/troye-worker python analyser.py
+     ghcr.io/selfhostit/troye-worker python analyser.py
    ```
    Without Docker: `cd workers && uv run python analyser.py` with the same variables.
    `TROYE_MODEL` picks another Ollama vision model.
@@ -166,7 +166,7 @@ Needs DSM 7.2 or later with **Container Manager** installed.
    `ssh you@nas.local`.
 2. Install into a shared folder, with `sudo` because Docker on DSM needs it:
    ```sh
-   curl -fsSL https://raw.githubusercontent.com/kalfasyan/troye/main/deploy/install.sh | sudo sh -s /volume1/docker/troye
+   curl -fsSL https://raw.githubusercontent.com/selfhostit/troye/main/deploy/install.sh | sudo sh -s /volume1/docker/troye
    ```
    The data stays owned by your DSM user (`PUID` and `PGID` in `.env`), so you can
    see and back it up in File Station.

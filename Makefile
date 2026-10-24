@@ -3,7 +3,7 @@
 .PHONY: help setup dev check test build image smoke run clean
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
-LDFLAGS := -s -w -X github.com/kalfasyan/troye/app.Version=$(VERSION)
+LDFLAGS := -s -w -X github.com/selfhostit/troye/app.Version=$(VERSION)
 
 help: ## Show the commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-8s %s\n", $$1, $$2}'

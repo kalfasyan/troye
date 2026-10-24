@@ -1,4 +1,4 @@
-module github.com/kalfasyan/troye
+module github.com/selfhostit/troye
 
 go 1.27
 

@@ -6,7 +6,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/tests"
 
-	"github.com/kalfasyan/troye/app"
+	"github.com/selfhostit/troye/app"
 )
 
 func TestRoutes(t *testing.T) {

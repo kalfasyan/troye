@@ -14,8 +14,8 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 
-	_ "github.com/kalfasyan/troye/migrations"
-	"github.com/kalfasyan/troye/push"
+	_ "github.com/selfhostit/troye/migrations"
+	"github.com/selfhostit/troye/push"
 )
 
 func newApp(t testing.TB) *tests.TestApp {

@@ -1,7 +1,7 @@
 #!/bin/sh
 # Installs or updates troye on this machine with Docker Compose.
 #
-#   curl -fsSL https://raw.githubusercontent.com/kalfasyan/troye/main/deploy/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/selfhostit/troye/main/deploy/install.sh | sh
 #
 # or, from a clone, `sh deploy/install.sh [folder]`. It sets up a folder
 # (~/troye by default) with the compose files and a .env, asks for a Tailscale
@@ -11,7 +11,7 @@
 set -eu
 
 app=troye
-repo=${TROYE_REPO:-kalfasyan/troye}
+repo=${TROYE_REPO:-selfhostit/troye}
 source=${TROYE_SOURCE:-https://raw.githubusercontent.com/$repo/main/deploy}
 dir=${1:-${TROYE_DIR:-$HOME/$app}}
 files="docker-compose.yml docker-compose.tailscale.yml docker-compose.host.yml .env.example"

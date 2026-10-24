@@ -198,7 +198,7 @@ package app
 import (
 	"github.com/pocketbase/pocketbase/core"
 
-	"github.com/kalfasyan/troye/push"
+	"github.com/selfhostit/troye/push"
 )
 
 func registerTasks(app core.App) {
@@ -255,7 +255,7 @@ collection), and runs a job once at startup if the server was off when it was du
 	})
 ```
 
-with `"fmt"`, `"github.com/pocketbase/dbx"` and `"github.com/kalfasyan/troye/jobs"`
+with `"fmt"`, `"github.com/pocketbase/dbx"` and `"github.com/selfhostit/troye/jobs"`
 added to the imports.
 
 ## 5. A worker

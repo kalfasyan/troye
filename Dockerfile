@@ -17,7 +17,7 @@ COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 COPY backend/ ./
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOARM=${TARGETVARIANT#v} \
-    go build -trimpath -ldflags="-s -w -X github.com/kalfasyan/troye/app.Version=$VERSION" -o /troye .
+    go build -trimpath -ldflags="-s -w -X github.com/selfhostit/troye/app.Version=$VERSION" -o /troye .
 
 # --- runtime ---
 FROM alpine:3.24
