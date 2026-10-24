@@ -1,10 +1,20 @@
 <script lang="ts">
   import { pb } from '../lib/pb';
   import { install } from '../lib/install.svelte';
+  import { eatingEnd, fastings, motivations } from '../lib/profile';
+  import { profile } from '../lib/profile.svelte';
   import { session } from '../lib/session.svelte';
   import Notifications from './Notifications.svelte';
 
   const user = $derived(session.user!);
+  const plan = $derived(profile.current!);
+  const why = $derived(
+    plan.why ||
+      plan.motivations
+        .map((m) => motivations.find((x) => x.id === m)?.label)
+        .filter(Boolean)
+        .join(' · '),
+  );
   const version = pb
     .send<{ version: string }>('/api/app/info', {})
     .then((i) => i.version)
@@ -21,12 +31,33 @@
     >
   </header>
 
-  <section class="card">
-    <h2 class="font-semibold">Your app starts here</h2>
-    <p class="mt-1 text-zinc-600 dark:text-zinc-400">
-      Edit <code class="font-mono text-sm">web/src/components/Home.svelte</code> and save.
+  <section class="card text-center">
+    <p class="text-sm text-zinc-500 dark:text-zinc-400">Your daily budget</p>
+    <p class="text-5xl font-bold tracking-tight text-brand-600 dark:text-brand-400">
+      {plan.calorie_budget.toLocaleString()}
     </p>
+    <p class="text-sm text-zinc-500 dark:text-zinc-400">calories</p>
+    <div class="mt-4 grid grid-cols-3 gap-2 text-sm">
+      <div><b class="block text-lg">{plan.carbs_g} g</b>carbs</div>
+      <div><b class="block text-lg">{plan.protein_g} g</b>protein</div>
+      <div><b class="block text-lg">{plan.fat_g} g</b>fat</div>
+    </div>
+    {#if plan.fasting !== 'none'}
+      <p class="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+        {fastings.find((f) => f.id === plan.fasting)?.label} fasting: eat from {plan.eating_start}
+        to {eatingEnd(plan.eating_start, plan.fasting)}
+      </p>
+    {/if}
   </section>
+
+  {#if why}
+    <section class="card">
+      <h2 class="text-sm text-zinc-500 dark:text-zinc-400">Why you're doing this</h2>
+      <p class="mt-1 font-medium">{why}</p>
+    </section>
+  {/if}
+
+  <button class="btn-secondary" onclick={() => profile.redo()}>Change my plan</button>
 
   {#if install.canPrompt}
     <section class="card flex items-center justify-between gap-4">
