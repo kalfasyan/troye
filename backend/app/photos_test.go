@@ -169,6 +169,17 @@ func TestPhotoFlow(t *testing.T) {
 	if len(items) != 1 || items[0].Food != rice.Id || items[0].Grams != 150 {
 		t.Errorf("second draft %+v", items)
 	}
+
+	// scoring a model matches without what was learned, and saves nothing
+	code, out := call(t, a, "POST", "/api/app/photos/match", worker,
+		`{"user":"`+ada.Id+`","items":[{"name":"White rice","grams":200,"confidence":0.5}]}`)
+	got, _ := out["items"].([]any)
+	if code != 200 || len(got) != 1 || got[0].(map[string]any)["grams"] != 200.0 || got[0].(map[string]any)["food"] != rice.Id {
+		t.Errorf("match %d %v", code, out)
+	}
+	if code, _ := call(t, a, "POST", "/api/app/photos/match", adaToken, `{"items":[]}`); code != 401 && code != 403 {
+		t.Errorf("a person used the match route: %d", code)
+	}
 }
 
 func TestPhotoFailsAndRetries(t *testing.T) {

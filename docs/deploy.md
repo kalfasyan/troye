@@ -123,6 +123,21 @@ Meal photos wait on the app until the GPU PC analyses them with a vision model i
 The analyser asks for photos every 20 seconds, which is also how the app knows the
 PC is on. Each person gets a notification as their photos are ready to check.
 
+### Picking the model
+
+Once you have logged some meals from photos, score other vision models on them:
+
+```sh
+cd workers
+ollama pull gemma3:12b
+TROYE_URL=... TROYE_WORKER=analyser TROYE_WORKER_PASSWORD=... \
+  uv run python evaluate.py qwen2.5vl:7b gemma3:12b
+```
+
+It prints how far off each model's calories and portions were and how many of the
+logged foods it found, next to the drafts you actually saw. It writes nothing. Set
+`TROYE_MODEL` to the winner. The Me tab shows the same scores for the model in use.
+
 ### Waking the PC from the phone
 
 When photos wait and the PC is off, the diary shows **Wake PC**. It makes the app
