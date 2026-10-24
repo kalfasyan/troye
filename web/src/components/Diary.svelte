@@ -3,9 +3,13 @@
   import { addDays, dayLabel, isoDay, meals, type Entry, type Meal } from '../lib/diary';
   import { diary } from '../lib/diary.svelte';
   import { errorMessage } from '../lib/pb';
+  import type { MealPhoto } from '../lib/photos';
+  import { photos } from '../lib/photos.svelte';
   import { profile } from '../lib/profile.svelte';
   import AddFood from './AddFood.svelte';
   import EditEntry from './EditEntry.svelte';
+  import PhotoReview from './PhotoReview.svelte';
+  import PhotoStrip from './PhotoStrip.svelte';
   import Ring from './Ring.svelte';
 
   // The day's diary: the calorie ring, macros against their targets, and the
@@ -15,16 +19,39 @@
   const today = isoDay(new Date());
   let adding = $state<Meal | null>(null);
   let editing = $state<Entry | null>(null);
+  let reviewing = $state<MealPhoto | null>(null);
   let undo = $state<{ label: string; run: () => Promise<void> } | null>(null);
   let undoTimer: ReturnType<typeof setTimeout>;
 
   onMount(() => {
     diary.show(today);
-    const unsubscribe = diary.subscribe();
+    photos.load();
+    openFromHash();
+    addEventListener('hashchange', openFromHash);
+    const subscriptions = [diary.subscribe(), photos.subscribe()];
     return () => {
-      unsubscribe.then((off) => off()).catch(() => {});
+      removeEventListener('hashchange', openFromHash);
+      for (const s of subscriptions) s.then((off) => off()).catch(() => {});
     };
   });
+
+  // a notification about a photo opens #photo/<id>
+  async function openFromHash() {
+    const id = location.hash.match(/^#photo\/(\w+)$/)?.[1];
+    if (!id) return;
+    history.replaceState(null, '', '#diary');
+    try {
+      const p = await photos.get(id);
+      if (p.status === 'logged') {
+        diary.show(p.date);
+      } else {
+        if (p.date !== diary.day) diary.show(p.date);
+        reviewing = p;
+      }
+    } catch {
+      diary.error = "That photo isn't here any more.";
+    }
+  }
 
   const macros = $derived([
     { label: 'Carbs', eaten: diary.totals.carbs, target: plan.carbs_g },
@@ -121,6 +148,8 @@
   </div>
 </section>
 
+<PhotoStrip day={diary.day} onopen={(p) => (reviewing = p)} />
+
 {#each meals as m (m.id)}
   {@const items = diary.byMeal(m.id)}
   <section class="card p-0">
@@ -171,6 +200,9 @@
 
 {#if adding}
   <AddFood meal={adding} onclose={() => (adding = null)} />
+{/if}
+{#if reviewing}
+  <PhotoReview photo={reviewing} onclose={() => (reviewing = null)} />
 {/if}
 {#if editing}
   <EditEntry entry={editing} onclose={() => (editing = null)} onremove={removed} />
