@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Diary from './Diary.svelte';
   import Me from './Me.svelte';
+  import Weight from './Weight.svelte';
 
   // The signed-in app: tabs, each with its own #address so Back works.
   const tabs = [
@@ -9,6 +10,11 @@
       id: 'diary',
       label: 'Diary',
       icon: 'M12 3a9 9 0 1 0 9 9M12 3a9 9 0 0 1 9 9M12 8a4 4 0 1 0 4 4',
+    },
+    {
+      id: 'weight',
+      label: 'Weight',
+      icon: 'M4 20h16M5 16l4.5-4.5 3 3L19 8M15 8h4v4',
     },
     {
       id: 'me',
@@ -32,6 +38,8 @@
   <main class="flex flex-col gap-4 px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-28">
     {#if tab === 'diary'}
       <Diary />
+    {:else if tab === 'weight'}
+      <Weight />
     {:else}
       <Me />
     {/if}
@@ -40,7 +48,7 @@
   <nav
     class="fixed inset-x-0 bottom-0 z-10 border-t border-zinc-200 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90"
   >
-    <div class="mx-auto grid max-w-md grid-cols-2">
+    <div class="mx-auto grid max-w-md grid-cols-3">
       {#each tabs as t (t.id)}
         <a
           href="#{t.id}"

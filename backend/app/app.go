@@ -29,6 +29,7 @@ func Register(app core.App, cfg Config) {
 
 	registerPlan(app)
 	registerDiary(app)
+	registerWeight(app)
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.GET("/api/app/info", info)
