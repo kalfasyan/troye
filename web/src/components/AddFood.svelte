@@ -3,6 +3,7 @@
   import { amountOf, meals, portions, type Food, type Meal } from '../lib/diary';
   import { diary, lookupBarcode, saveCustomFood, searchFoods } from '../lib/diary.svelte';
   import { errorMessage } from '../lib/pb';
+  import { photos } from '../lib/photos.svelte';
   import BarcodeScanner from './BarcodeScanner.svelte';
   import Sheet from './Sheet.svelte';
 
@@ -10,7 +11,7 @@
   // custom food, or quick-add calories. Picking a food asks how much.
   let { meal: startMeal, onclose }: { meal: Meal; onclose: () => void } = $props();
 
-  type View = 'search' | 'amount' | 'scan' | 'custom' | 'quick';
+  type View = 'search' | 'amount' | 'scan' | 'custom' | 'quick' | 'photo';
   let view = $state<View>('search');
   // the meal it opened for, then whichever the person picks
   // svelte-ignore state_referenced_locally
@@ -40,6 +41,35 @@
     serving_label: '',
   });
   let quick = $state({ name: '', kcal: undefined as number | undefined });
+
+  // the photo step: the picked photo and a note for the analyser
+  let photoFile = $state<File | null>(null);
+  let photoPreview = $state('');
+  let photoNote = $state('');
+
+  function pickedPhoto(e: Event) {
+    const file = (e.currentTarget as HTMLInputElement).files?.[0];
+    if (!file) return;
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    photoFile = file;
+    photoPreview = URL.createObjectURL(file);
+    error = '';
+    view = 'photo';
+  }
+
+  async function sendPhoto() {
+    if (!photoFile) return;
+    busy = true;
+    error = '';
+    try {
+      await photos.add(photoFile, meal, diary.day, photoNote.trim());
+      onclose();
+    } catch (err) {
+      error = errorMessage(err, "Couldn't send the photo. Please try again.");
+    } finally {
+      busy = false;
+    }
+  }
 
   onMount(() => {
     diary.loadRecent();
@@ -149,6 +179,7 @@
     scan: 'Scan a barcode',
     custom: 'New food',
     quick: 'Quick add',
+    photo: 'Meal photo',
   };
   const shown = $derived(query.trim().length >= 2 ? results : diary.recent);
 </script>
@@ -199,7 +230,23 @@
       autocomplete="off"
       bind:value={query}
     />
-    <div class="mt-3 grid grid-cols-3 gap-2 text-sm">
+    <label class="btn-primary mt-3 cursor-pointer flex-row gap-2">
+      <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8"
+        ><path
+          d="M4 8h3l2-3h6l2 3h3v11H4z M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8"
+          stroke-linejoin="round"
+        /></svg
+      >
+      Take a photo
+      <input
+        class="sr-only"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onchange={pickedPhoto}
+      />
+    </label>
+    <div class="mt-2 grid grid-cols-3 gap-2 text-sm">
       <button class="btn-secondary px-2" onclick={() => (view = 'scan')}>Scan barcode</button>
       <button
         class="btn-secondary px-2"
@@ -332,6 +379,27 @@
       </div>
       <button class="btn-primary mt-auto" disabled={busy}>{busy ? 'Saving…' : 'Save food'}</button>
     </form>
+  {:else if view === 'photo'}
+    <div class="flex flex-1 flex-col gap-3">
+      {#if photoPreview}
+        <img src={photoPreview} alt="Your meal" class="max-h-72 w-full rounded-2xl object-cover" />
+      {/if}
+      <label
+        >Anything it can't see? (optional)
+        <input
+          maxlength="200"
+          placeholder="Cooked in butter, no sauce"
+          bind:value={photoNote}
+        /></label
+      >
+      <p class="text-sm text-zinc-600 dark:text-zinc-400">
+        Your PC names what's on the plate and weighs it by eye, and the calories come from the food
+        tables. You check it before it goes in your diary.
+      </p>
+      <button class="btn-primary mt-auto" disabled={busy} onclick={sendPhoto}
+        >{busy ? 'Sending…' : 'Analyse photo'}</button
+      >
+    </div>
   {:else if view === 'quick'}
     <form class="flex flex-1 flex-col gap-3" onsubmit={saveQuick}>
       <p class="text-sm text-zinc-600 dark:text-zinc-400">

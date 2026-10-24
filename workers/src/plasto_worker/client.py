@@ -94,6 +94,13 @@ class Client:
         """Where to download a file stored in a record's file field."""
         return f"{self.url}/api/files/{record['collectionId']}/{record['id']}/{filename}"
 
+    def download(self, path: str) -> bytes:
+        """The bytes at a path or URL of the app, such as a file link with a token."""
+        res = self._http.get(path)
+        if res.status_code >= 400:
+            raise ApiError(res.status_code, "could not download the file", _body(res))
+        return res.content
+
     def heartbeat(self) -> None:
         """Tells the app this worker is alive; shown as last_seen in the admin UI."""
         self.request("POST", "/api/app/workers/heartbeat")

@@ -48,6 +48,12 @@ server's message. Filters use [PocketBase's syntax](https://pocketbase.io/docs/a
 What a worker may do is set by each collection's API rules: allow workers with
 `@request.auth.collectionName = "workers"`.
 
+## The photo analyser
+
+`analyser.py` is Troye's own worker: it runs on the GPU PC next to Ollama, names
+the food in queued meal photos and estimates the grams. See "The photo analyser"
+in `docs/deploy.md`.
+
 ## 3. Run it
 
 You need [uv](https://docs.astral.sh/uv/).

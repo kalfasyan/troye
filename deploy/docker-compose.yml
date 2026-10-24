@@ -16,6 +16,8 @@ services:
     environment:
       TZ: ${TZ:-UTC}
       TROYE_PUSH_CONTACT: ${TROYE_PUSH_CONTACT:-}
+      TROYE_WAKE_MAC: ${TROYE_WAKE_MAC:-}
+      TROYE_WAKE_ADDR: ${TROYE_WAKE_ADDR:-}
     mem_limit: 512m
 
   # Runs one of the workers in workers/, TROYE_WORKER_SCRIPT (worker.py by default).

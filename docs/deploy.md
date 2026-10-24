@@ -100,6 +100,44 @@ docker run -d --name worker --restart unless-stopped \
   ghcr.io/kalfasyan/troye-worker python camera.py
 ```
 
+## The photo analyser (GPU PC)
+
+Meal photos wait on the app until the GPU PC analyses them with a vision model in
+[Ollama](https://ollama.com). Nothing leaves your home network.
+
+1. On the PC, install Ollama (it uses the NVIDIA card through CUDA, or the AMD card
+   through ROCm) and download the model: `ollama pull qwen2.5vl:7b`. It needs about
+   6 GB of graphics memory, so the RTX 3060 (12 GB) and the RX 7900 XT (20 GB) both fit.
+2. In the admin UI, add a worker named `analyser` with a password.
+3. Run the analyser on the PC, so it starts with it:
+   ```sh
+   docker run -d --name analyser --restart unless-stopped --network host \
+     -e TROYE_URL=https://troye.<name>.synology.me \
+     -e TROYE_WORKER=analyser -e TROYE_WORKER_PASSWORD=... \
+     -e OLLAMA_URL=http://127.0.0.1:11434 -e TZ=Europe/Brussels \
+     ghcr.io/kalfasyan/troye-worker python analyser.py
+   ```
+   Without Docker: `cd workers && uv run python analyser.py` with the same variables.
+   `TROYE_MODEL` picks another Ollama vision model.
+
+The analyser asks for photos every 20 seconds, which is also how the app knows the
+PC is on. Each person gets a notification as their photos are ready to check.
+
+### Waking the PC from the phone
+
+When photos wait and the PC is off, the diary shows **Wake PC**. It makes the app
+send a Wake-on-LAN packet:
+
+1. Turn on Wake-on-LAN in the PC's BIOS and for its network card (in Windows, the
+   card's Power Management settings; in Linux, `ethtool -s <card> wol g`). The PC
+   needs a wired connection.
+2. In `.env`, set `TROYE_WAKE_MAC` to the PC's MAC address, and `TROYE_WAKE_ADDR` to
+   your network's broadcast address with port 9, such as `192.168.1.255:9`.
+
+A container on Docker's own network can't always reach the home network's broadcast
+address. If the PC doesn't wake, add `network_mode: host` to the `app` service in
+`docker-compose.yml` (and then use `PORT` directly, without the `ports:` mapping).
+
 ## Synology NAS
 
 Needs DSM 7.2 or later with **Container Manager** installed.
