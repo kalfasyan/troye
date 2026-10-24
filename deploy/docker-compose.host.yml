@@ -1,0 +1,18 @@
+# Runs the app on the machine's own network instead of Docker's, so its
+# Wake-on-LAN packet reaches the home network (a container on Docker's network
+# can't send a broadcast there). It still listens on localhost only, at PORT.
+# Enabled with COMPOSE_FILE=docker-compose.yml:docker-compose.host.yml in .env.
+# Not together with Tailscale, whose sidecar reaches the app on Docker's network.
+
+services:
+  app:
+    network_mode: host
+    # Docker ignores the ports: mapping on the host network
+    command:
+      - /app/troye
+      - serve
+      - --http=127.0.0.1:${PORT:-8090}
+      - --dir=/app/pb_data
+      - --publicDir=/app/pb_public
+    healthcheck:
+      test: wget -qO- http://127.0.0.1:${PORT:-8090}/api/health || exit 1

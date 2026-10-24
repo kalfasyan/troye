@@ -84,7 +84,8 @@ curl -fsSL https://raw.githubusercontent.com/kalfasyan/troye/main/deploy/install
 
 It asks for a Tailscale auth key, so your devices reach the app at
 `https://troye.<your-tailnet>.ts.net`, and starts it with Docker Compose. See
-[docs/deploy.md](docs/deploy.md) for updates, backups, workers, Synology and the Pi.
+[docs/deploy.md](docs/deploy.md) for updates, backups, workers, Synology and the Pi,
+and [docs/synology.md](docs/synology.md) for the whole household setup on a Synology NAS.
 
 ## Layout
 

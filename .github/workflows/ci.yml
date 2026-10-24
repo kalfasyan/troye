@@ -99,6 +99,7 @@ jobs:
       - name: Smoke test
         run: |
           docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.tailscale.yml config -q
+          docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.host.yml config -q
           deploy/smoke-test.sh
         env:
           TROYE_IMAGE: troye:smoke

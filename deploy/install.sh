@@ -5,7 +5,7 @@
 #
 # or, from a clone, `sh deploy/install.sh [folder]`. It sets up a folder
 # (~/troye by default) with the compose files and a .env, asks for a Tailscale
-# auth key the first time (or takes TS_AUTHKEY from the environment), and starts
+# auth key the first time (or takes TS_AUTHKEY from the environment; PORT too), and starts
 # the app. Run it again to update; it keeps your
 # .env and data and replaces the compose files, so keep your settings in .env.
 set -eu
@@ -14,7 +14,7 @@ app=troye
 repo=${TROYE_REPO:-kalfasyan/troye}
 source=${TROYE_SOURCE:-https://raw.githubusercontent.com/$repo/main/deploy}
 dir=${1:-${TROYE_DIR:-$HOME/$app}}
-files="docker-compose.yml docker-compose.tailscale.yml .env.example"
+files="docker-compose.yml docker-compose.tailscale.yml docker-compose.host.yml .env.example"
 
 say() { printf '\033[1m%s\033[0m\n' "$*"; }
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
@@ -63,6 +63,8 @@ if [ ! -f .env ]; then
 		setenv PGID "${SUDO_GID:-$(id -g)}"
 	fi
 	setenv TS_HOSTNAME "$(basename "$dir")"
+	# another app may have the default port: `... | PORT=8092 sh`
+	[ -n "${PORT:-}" ] && setenv PORT "$PORT"
 
 	key=${TS_AUTHKEY:-}
 	if [ -z "$key" ] && interactive; then
