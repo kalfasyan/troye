@@ -36,6 +36,8 @@ export interface MealPhoto extends RecordModel {
   note: string;
   status: PhotoStatus;
   items: DraftItem[] | null;
+  /** what was logged in the end */
+  confirmed: { name: string; food: string; grams: number; kcal: number }[] | null;
   model: string;
   error: string;
 }

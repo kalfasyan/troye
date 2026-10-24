@@ -4,6 +4,7 @@
   import { eatingEnd, fastings, motivations } from '../lib/profile';
   import { profile } from '../lib/profile.svelte';
   import { session } from '../lib/session.svelte';
+  import Accuracy from './Accuracy.svelte';
   import Notifications from './Notifications.svelte';
 
   // The person's plan, their "why", notifications and account.
@@ -65,6 +66,8 @@
     <p>To install this app, tap <b>Share</b> in Safari, then <b>Add to Home Screen</b>.</p>
   </section>
 {/if}
+
+<Accuracy />
 
 <Notifications />
 

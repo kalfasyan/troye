@@ -70,6 +70,7 @@ func registerPhotos(app core.App) {
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.POST("/api/app/photos/claim", claimPhoto).Bind(apis.RequireAuth("workers"))
 		se.Router.POST("/api/app/photos/{id}/draft", postDraft).Bind(apis.RequireAuth("workers"))
+		se.Router.POST("/api/app/photos/match", matchDraft).Bind(apis.RequireAuth("workers"))
 		se.Router.POST("/api/app/photos/{id}/log", logPhoto).Bind(apis.RequireAuth("users"))
 		se.Router.GET("/api/app/analyser", analyserStatus).Bind(apis.RequireAuth("users"))
 		se.Router.POST("/api/app/analyser/wake", wakeAnalyser).Bind(apis.RequireAuth("users"))
@@ -142,13 +143,9 @@ func claimPhoto(e *core.RequestEvent) error {
 // postDraft takes what the analyser saw, or why it couldn't.
 func postDraft(e *core.RequestEvent) error {
 	var body struct {
-		Items []struct {
-			Name       string  `json:"name"`
-			Grams      float64 `json:"grams"`
-			Confidence float64 `json:"confidence"`
-		} `json:"items"`
-		Model string `json:"model"`
-		Error string `json:"error"`
+		Items []SeenItem `json:"items"`
+		Model string     `json:"model"`
+		Error string     `json:"error"`
 	}
 	if err := e.BindBody(&body); err != nil {
 		return e.BadRequestError("Could not read the draft.", err)
@@ -172,21 +169,9 @@ func postDraft(e *core.RequestEvent) error {
 		photo.Set("status", "failed")
 		photo.Set("error", clip(msg, 500))
 	} else {
-		items := make([]DraftItem, 0, len(body.Items))
-		for _, it := range body.Items {
-			name := strings.TrimSpace(it.Name)
-			if name == "" || len(items) == 20 {
-				continue
-			}
-			item := DraftItem{
-				Name:       clip(name, 200),
-				Grams:      math.Round(math.Min(math.Max(it.Grams, 1), 3000)),
-				Confidence: math.Min(math.Max(it.Confidence, 0), 1),
-			}
-			if err := matchItem(e.App, user, &item); err != nil {
-				return e.InternalServerError("", err)
-			}
-			items = append(items, item)
+		items, err := buildDraft(e.App, user, body.Items, true)
+		if err != nil {
+			return e.InternalServerError("", err)
 		}
 		photo.Set("status", "ready")
 		photo.Set("items", items)
@@ -213,6 +198,53 @@ func postDraft(e *core.RequestEvent) error {
 		})
 	}
 	return e.JSON(http.StatusOK, photo)
+}
+
+// SeenItem is what the analyser reports for one thing in a photo.
+type SeenItem struct {
+	Name       string  `json:"name"`
+	Grams      float64 `json:"grams"`
+	Confidence float64 `json:"confidence"`
+}
+
+// buildDraft cleans up what the analyser saw and matches each item to a food.
+// Without aliases it ignores what the person logged before, which is how
+// models are compared on photos whose answers those aliases came from.
+func buildDraft(app core.App, user string, seen []SeenItem, aliases bool) ([]DraftItem, error) {
+	items := make([]DraftItem, 0, len(seen))
+	for _, it := range seen {
+		name := strings.TrimSpace(it.Name)
+		if name == "" || len(items) == 20 {
+			continue
+		}
+		item := DraftItem{
+			Name:       clip(name, 200),
+			Grams:      math.Round(math.Min(math.Max(it.Grams, 1), 3000)),
+			Confidence: math.Min(math.Max(it.Confidence, 0), 1),
+		}
+		if err := matchItem(app, user, &item, aliases); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
+// matchDraft matches items for a person without saving anything, for scoring
+// a model on photos that were already logged (workers/evaluate.py).
+func matchDraft(e *core.RequestEvent) error {
+	var body struct {
+		User  string     `json:"user"`
+		Items []SeenItem `json:"items"`
+	}
+	if err := e.BindBody(&body); err != nil {
+		return e.BadRequestError("Could not read the items.", err)
+	}
+	items, err := buildDraft(e.App, body.User, body.Items, false)
+	if err != nil {
+		return e.InternalServerError("", err)
+	}
+	return e.JSON(http.StatusOK, map[string]any{"items": items})
 }
 
 func mealName(meal string) string {
@@ -247,10 +279,10 @@ func draftSummary(photo *core.Record) string {
 
 // matchItem finds the food for an item: what the person logged for that name
 // before, or else the best match in the food tables.
-func matchItem(app core.App, user string, item *DraftItem) error {
+func matchItem(app core.App, user string, item *DraftItem, aliases bool) error {
 	alias, err := app.FindFirstRecordByFilter("food_aliases", "user = {:user} && alias = {:alias}",
 		dbx.Params{"user": user, "alias": strings.ToLower(item.Name)})
-	if err == nil {
+	if err == nil && aliases {
 		if food, err := app.FindRecordById("foods", alias.GetString("food")); err == nil {
 			setFood(item, food)
 			// the grams they logged last time are a better guess than the model's

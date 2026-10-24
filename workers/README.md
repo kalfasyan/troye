@@ -52,7 +52,8 @@ What a worker may do is set by each collection's API rules: allow workers with
 
 `analyser.py` is Troye's own worker: it runs on the GPU PC next to Ollama, names
 the food in queued meal photos and estimates the grams. See "The photo analyser"
-in `docs/deploy.md`.
+in `docs/deploy.md`. `evaluate.py` scores vision models on the photos already
+logged, to pick the one it uses.
 
 ## 3. Run it
 

@@ -1,67 +1,11 @@
 import base64
 import json
-import struct
-import zlib
 
 import httpx
-import pytest
 
 import analyser
 from plasto_worker import Client
-
-
-def tiny_png() -> bytes:
-    def chunk(kind: bytes, data: bytes) -> bytes:
-        body = kind + data
-        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body))
-
-    raw = b"\x00" + b"\x00\x00\x00" * 2
-    return (
-        b"\x89PNG\r\n\x1a\n"
-        + chunk(b"IHDR", struct.pack(">IIBBBBB", 2, 1, 8, 2, 0, 0, 0))
-        + chunk(b"IDAT", zlib.compress(raw))
-        + chunk(b"IEND", b"")
-    )
-
-
-def fake_ollama(answer: dict, seen: list) -> httpx.Client:
-    def handle(req: httpx.Request) -> httpx.Response:
-        if req.url.path == "/api/tags":
-            return httpx.Response(200, json={"models": []})
-        body = json.loads(req.content)
-        seen.append(body)
-        return httpx.Response(200, json={"message": {"content": json.dumps(answer)}})
-
-    return httpx.Client(base_url="http://ollama", transport=httpx.MockTransport(handle))
-
-
-@pytest.fixture
-def person(server, admin):
-    """A user with a queued lunch photo; returns (user id, token, photo id)."""
-    email = "ada@example.com"
-    res = admin.get("/api/collections/users/records", params={"filter": f'email = "{email}"'})
-    if not res.json()["items"]:
-        admin.post(
-            "/api/collections/users/records",
-            json={"email": email, "password": "password123", "passwordConfirm": "password123"},
-        ).raise_for_status()
-        admin.post(
-            "/api/collections/foods/records",
-            json={"name": "Rice, white, cooked", "source": "ciqual", "kcal": 130, "protein": 2.7},
-        ).raise_for_status()
-    auth = httpx.post(
-        f"{server}/api/collections/users/auth-with-password",
-        json={"identity": email, "password": "password123"},
-    ).json()
-    token, uid = auth["token"], auth["record"]["id"]
-    photo = httpx.post(
-        f"{server}/api/collections/meal_photos/records",
-        headers={"Authorization": token},
-        data={"user": uid, "date": "2026-10-24", "meal": "lunch", "note": "no sauce"},
-        files={"photo": ("lunch.png", tiny_png(), "image/png")},
-    )
-    photo.raise_for_status()
-    return uid, token, photo.json()["id"]
+from tests.conftest import fake_ollama, tiny_png
 
 
 def test_it_analyses_queued_photos(server, worker, person):
