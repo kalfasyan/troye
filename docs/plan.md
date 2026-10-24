@@ -45,6 +45,19 @@ Wake-on-LAN packet. Logging never waits on it: search and barcode work at once.
 The app is for a household: each person has their own account, and their diary,
 photos, weigh-ins and plan are visible only to them.
 
+## Hosting
+
+The app runs on a Synology DS220+ (x86-64, Container Manager), set up like Flowy:
+
+- `deploy/install.sh` over SSH, on port 8092 next to Splitwiz (8090) and Flowy (8091).
+- `https://troye.<name>.synology.me` through the DSM reverse proxy with the
+  existing Let's Encrypt wildcard certificate, so both phones reach it at home and
+  away with no VPN app, and push and app install work (they need HTTPS).
+- Tailscale stays an option for keeping it off the internet.
+- The analyser on the GPU PC talks to the NAS over the home network. The NAS
+  sends the Wake-on-LAN packet as a broadcast on the home network.
+- Photos stay in `pb_data` on the NAS, inside the nightly backups and Hyper Backup.
+
 ## Nutrition data
 
 Tuned for shopping in Belgium, so European tables come first:
