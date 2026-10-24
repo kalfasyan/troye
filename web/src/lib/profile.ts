@@ -1,4 +1,5 @@
 import type { RecordModel } from 'pocketbase';
+import type { FoodLanguage } from './diary';
 
 // A person's plan: their answers to the onboarding interview and the daily
 // targets the server works out from them (backend/app/plan.go).
@@ -33,6 +34,8 @@ export interface Answers {
 export interface Profile extends RecordModel, Answers {
   user: string;
   onboarded: boolean;
+  /** the language food names show in; empty is English */
+  food_language: FoodLanguage | '';
   calorie_budget: number;
   protein_g: number;
   carbs_g: number;

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { pb } from '../lib/pb';
+  import { foodLanguages } from '../lib/diary';
   import { install } from '../lib/install.svelte';
   import { eatingEnd, fastings, motivations } from '../lib/profile';
   import { profile } from '../lib/profile.svelte';
@@ -72,6 +73,22 @@
 <Accuracy />
 
 <Notifications />
+
+<section class="card">
+  <h2 class="text-sm text-zinc-500 dark:text-zinc-400">Food names</h2>
+  <div class="mt-2 grid grid-cols-3 gap-2">
+    {#each foodLanguages as l (l.id)}
+      <button
+        class="choice py-2"
+        class:chosen={(plan.food_language || 'en') === l.id}
+        onclick={() => profile.setFoodLanguage(l.id)}>{l.label}</button
+      >
+    {/each}
+  </div>
+  <p class="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+    Foods without a name in your language show in English. Search finds every language.
+  </p>
+</section>
 
 <button class="btn-secondary" onclick={() => (showFoodData = true)}>Food data and sources</button>
 {#if showFoodData}

@@ -3,6 +3,7 @@ import {
   addDays,
   amountOf,
   dayLabel,
+  foodName,
   portions,
   recentFoods,
   sum,
@@ -64,5 +65,14 @@ describe('recentFoods', () => {
       'rice',
       'soup',
     ]);
+  });
+});
+
+describe('foodName', () => {
+  const rice = { name: 'Rice, cooked', name_nl: 'Rijst, gekookt', name_fr: '' };
+  it('shows the chosen language, else English', () => {
+    expect(foodName(rice, 'nl')).toBe('Rijst, gekookt');
+    expect(foodName(rice, 'fr')).toBe('Rice, cooked');
+    expect(foodName(rice, '')).toBe('Rice, cooked');
   });
 });
