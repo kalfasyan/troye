@@ -1,0 +1,14 @@
+# Rebuilds and restarts the backend when a Go file changes (make dev).
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/plasto ."
+entrypoint = ["./tmp/plasto", "serve", "--dev", "--http=127.0.0.1:8090", "--dir=../pb_data", "--publicDir=../web/dist"]
+include_ext = ["go"]
+exclude_dir = ["tmp", "pb_data"]
+exclude_regex = ["_test\\.go"]
+delay = 200
+
+[log]
+main_only = true

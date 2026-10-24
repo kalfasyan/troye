@@ -1,0 +1,179 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Format, vet and test
+        working-directory: backend
+        run: |
+          test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+          go vet ./...
+          go test -race ./...
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Lint, check, test and build
+        working-directory: web
+        run: |
+          npm ci
+          npm run lint
+          npm run check
+          npm test
+          npm run build
+
+  workers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: workers/uv.lock
+      # the tests build the backend and run the worker kit and the workers against it
+      - name: Lint and test
+        working-directory: workers
+        run: |
+          uv sync --locked
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run pytest -q
+
+  # TEMPLATE start (rename.sh removes this job from new apps)
+  # Makes an app from the template the way a person would, then checks and tests it.
+  template:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: astral-sh/setup-uv@v6
+      - name: Rename, strip the demo, check and test
+        run: |
+          git remote set-url origin https://github.com/example/door-bell.git
+          scripts/rename.sh
+          scripts/strip-demo.sh
+          if git grep -n -i plasto | grep -v -e plasto_worker -e 'built on'; then
+            echo "rename.sh missed the lines above"
+            exit 1
+          fi
+          make setup check test
+          cd web && npm run build
+  # TEMPLATE end
+
+  image:
+    needs: [backend, web, workers]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      # a release tag (v1.2.3) names the version; otherwise the commit does
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+
+      # Build both images for this runner and deploy them with the compose file.
+      - name: Build the app for the smoke test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: plasto:smoke
+          build-args: VERSION=${{ env.VERSION }}
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,mode=max,scope=app
+      - name: Build the worker for the smoke test
+        uses: docker/build-push-action@v6
+        with:
+          context: workers
+          load: true
+          tags: plasto-worker:smoke
+          cache-from: type=gha,scope=worker
+          cache-to: type=gha,mode=max,scope=worker
+      - name: Smoke test
+        run: |
+          docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.tailscale.yml config -q
+          deploy/smoke-test.sh
+        env:
+          PLASTO_IMAGE: plasto:smoke
+          PLASTO_WORKER_IMAGE: plasto-worker:smoke
+          EXPECT_VERSION: ${{ env.VERSION }}
+
+      # On main and on release tags, publish both images for every platform people run them on.
+      - uses: docker/setup-qemu-action@v4
+        if: github.event_name == 'push'
+      - uses: docker/login-action@v4
+        if: github.event_name == 'push'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Image tags
+        if: github.event_name == 'push'
+        run: |
+          image=ghcr.io/${GITHUB_REPOSITORY,,}
+          for name in app worker; do
+            [ $name = app ] && base=$image || base=$image-worker
+            if [ "$GITHUB_REF_TYPE" = tag ]; then
+              tags="$base:$GITHUB_REF_NAME"
+            else
+              tags="$base:latest,$base:$GITHUB_SHA"
+            fi
+            echo "${name}_tags=$tags" >> "$GITHUB_ENV"
+          done
+      - name: Publish the app
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          build-args: VERSION=${{ env.VERSION }}
+          tags: ${{ env.app_tags }}
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,mode=max,scope=app
+      - name: Publish the worker
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: workers
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: ${{ env.worker_tags }}
+          cache-from: type=gha,scope=worker
+          cache-to: type=gha,mode=max,scope=worker

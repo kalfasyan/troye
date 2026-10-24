@@ -1,0 +1,32 @@
+# Adds a Tailscale sidecar that puts the app on your tailnet at
+# https://<TS_HOSTNAME>.<your-tailnet>.ts.net with a real certificate.
+# Enabled with COMPOSE_FILE=docker-compose.yml:docker-compose.tailscale.yml in .env.
+
+services:
+  tailscale:
+    image: tailscale/tailscale:stable
+    hostname: ${TS_HOSTNAME:-plasto}
+    restart: unless-stopped
+    depends_on: [app]
+    environment:
+      # Only needed for the first start; the login is kept in ./tailscale.
+      TS_AUTHKEY: ${TS_AUTHKEY:-}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+    volumes:
+      - ./tailscale:/var/lib/tailscale
+    configs:
+      - source: serve
+        target: /config/serve.json
+    mem_limit: 256m
+
+configs:
+  # HTTPS on port 443 of the tailnet address, forwarded to the app.
+  serve:
+    content: |
+      {
+        "TCP": { "443": { "HTTPS": true } },
+        "Web": {
+          "$${TS_CERT_DOMAIN}:443": { "Handlers": { "/": { "Proxy": "http://app:8090" } } }
+        }
+      }

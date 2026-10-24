@@ -1,0 +1,22 @@
+# build output
+dist/
+web/dist/
+backend/tmp/
+
+# dependencies
+node_modules/
+
+# local data and secrets
+pb_data/
+.env
+
+# editors and OS
+.DS_Store
+.idea/
+.vscode/
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
