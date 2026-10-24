@@ -14,7 +14,7 @@ follow your weight on a trend chart. Photos are analysed by a vision model on
 your own GPU PC, never by a cloud service, and every photo and log stays at home.
 
 It is a work in progress; [docs/plan.md](docs/plan.md) has the architecture and
-the build plan. Troye is built on [plasto](https://github.com/kalfasyan/plasto).
+the build plan. Troye is built on [plasto](https://github.com/selfhostit/plasto).
 
 ## Quick start
 
