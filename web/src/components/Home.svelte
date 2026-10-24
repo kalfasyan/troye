@@ -1,88 +1,67 @@
 <script lang="ts">
-  import { pb } from '../lib/pb';
-  import { install } from '../lib/install.svelte';
-  import { eatingEnd, fastings, motivations } from '../lib/profile';
-  import { profile } from '../lib/profile.svelte';
-  import { session } from '../lib/session.svelte';
-  import Notifications from './Notifications.svelte';
+  import { onMount } from 'svelte';
+  import Diary from './Diary.svelte';
+  import Me from './Me.svelte';
 
-  const user = $derived(session.user!);
-  const plan = $derived(profile.current!);
-  const why = $derived(
-    plan.why ||
-      plan.motivations
-        .map((m) => motivations.find((x) => x.id === m)?.label)
-        .filter(Boolean)
-        .join(' · '),
-  );
-  const version = pb
-    .send<{ version: string }>('/api/app/info', {})
-    .then((i) => i.version)
-    .catch(() => '');
+  // The signed-in app: tabs, each with its own #address so Back works.
+  const tabs = [
+    {
+      id: 'diary',
+      label: 'Diary',
+      icon: 'M12 3a9 9 0 1 0 9 9M12 3a9 9 0 0 1 9 9M12 8a4 4 0 1 0 4 4',
+    },
+    {
+      id: 'me',
+      label: 'Me',
+      icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0',
+    },
+  ] as const;
+  type Tab = (typeof tabs)[number]['id'];
+
+  const fromHash = (): Tab => tabs.find((t) => `#${t.id}` === location.hash)?.id ?? 'diary';
+  let tab = $state<Tab>(fromHash());
+
+  onMount(() => {
+    const onHash = () => (tab = fromHash());
+    addEventListener('hashchange', onHash);
+    return () => removeEventListener('hashchange', onHash);
+  });
 </script>
 
-<main
-  class="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-8"
->
-  <header class="flex items-center justify-between">
-    <h1 class="text-2xl font-bold tracking-tight">Hi {user.name || user.email}</h1>
-    <button class="btn-secondary px-3 py-2 text-sm" onclick={() => session.logout()}
-      >Sign out</button
-    >
-  </header>
+<div class="mx-auto min-h-dvh max-w-md">
+  <main class="flex flex-col gap-4 px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-28">
+    {#if tab === 'diary'}
+      <Diary />
+    {:else}
+      <Me />
+    {/if}
+  </main>
 
-  <section class="card text-center">
-    <p class="text-sm text-zinc-500 dark:text-zinc-400">Your daily budget</p>
-    <p class="text-5xl font-bold tracking-tight text-brand-600 dark:text-brand-400">
-      {plan.calorie_budget.toLocaleString()}
-    </p>
-    <p class="text-sm text-zinc-500 dark:text-zinc-400">calories</p>
-    <div class="mt-4 grid grid-cols-3 gap-2 text-sm">
-      <div><b class="block text-lg">{plan.carbs_g} g</b>carbs</div>
-      <div><b class="block text-lg">{plan.protein_g} g</b>protein</div>
-      <div><b class="block text-lg">{plan.fat_g} g</b>fat</div>
+  <nav
+    class="fixed inset-x-0 bottom-0 z-10 border-t border-zinc-200 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90"
+  >
+    <div class="mx-auto grid max-w-md grid-cols-2">
+      {#each tabs as t (t.id)}
+        <a
+          href="#{t.id}"
+          class="flex flex-col items-center gap-0.5 py-2.5 text-xs font-medium {tab === t.id
+            ? 'text-brand-600 dark:text-brand-400'
+            : 'text-zinc-500'}"
+          aria-current={tab === t.id ? 'page' : undefined}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            class="size-6"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"><path d={t.icon} /></svg
+          >
+          {t.label}
+        </a>
+      {/each}
     </div>
-    {#if plan.fasting !== 'none'}
-      <p class="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
-        {fastings.find((f) => f.id === plan.fasting)?.label} fasting: eat from {plan.eating_start}
-        to {eatingEnd(plan.eating_start, plan.fasting)}
-      </p>
-    {/if}
-  </section>
-
-  {#if why}
-    <section class="card">
-      <h2 class="text-sm text-zinc-500 dark:text-zinc-400">Why you're doing this</h2>
-      <p class="mt-1 font-medium">{why}</p>
-    </section>
-  {/if}
-
-  <button class="btn-secondary" onclick={() => profile.redo()}>Change my plan</button>
-
-  {#if install.canPrompt}
-    <section class="card flex items-center justify-between gap-4">
-      <p>Install this app for quick access from your home screen.</p>
-      <button class="btn-primary shrink-0" onclick={() => install.install()}>Install</button>
-    </section>
-  {:else if install.needsIosSteps}
-    <section class="card">
-      <p>To install this app, tap <b>Share</b> in Safari, then <b>Add to Home Screen</b>.</p>
-    </section>
-  {/if}
-
-  <Notifications />
-
-  <section class="card text-sm text-zinc-600 dark:text-zinc-400">
-    Signed in as {user.email}{session.isOwner ? ' (owner)' : ''}.
-    {#if session.isOwner}
-      Manage users and data in the <a
-        class="text-brand-600 underline dark:text-brand-400"
-        href="/_/">admin page</a
-      >.
-    {/if}
-  </section>
-
-  {#await version then v}
-    {#if v}<p class="mt-auto text-center text-xs text-zinc-400">Version {v}</p>{/if}
-  {/await}
-</main>
+  </nav>
+</div>
