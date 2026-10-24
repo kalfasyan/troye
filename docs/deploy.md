@@ -149,11 +149,16 @@ send a Wake-on-LAN packet:
 2. In `.env`, set `TROYE_WAKE_MAC` to the PC's MAC address, and `TROYE_WAKE_ADDR` to
    your network's broadcast address with port 9, such as `192.168.1.255:9`.
 
-A container on Docker's own network can't always reach the home network's broadcast
-address. If the PC doesn't wake, add `network_mode: host` to the `app` service in
-`docker-compose.yml` (and then use `PORT` directly, without the `ports:` mapping).
+3. Run the app on the host network, since a container on Docker's own network can't
+   send a broadcast to the home network: uncomment
+   `COMPOSE_FILE=docker-compose.yml:docker-compose.host.yml` in `.env` and run
+   `docker compose up -d`. It still listens on `127.0.0.1` at `PORT` only. This
+   replaces the Tailscale sidecar, so use a reverse proxy instead.
 
 ## Synology NAS
+
+[synology.md](synology.md) walks through the whole setup on a Synology, from the
+install to both phones and the GPU PC. In short:
 
 Needs DSM 7.2 or later with **Container Manager** installed.
 

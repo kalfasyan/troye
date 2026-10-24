@@ -1,7 +1,8 @@
 #!/bin/sh
 # End-to-end check of a deploy: starts the app and a worker with
 # docker-compose.yml in a scratch folder, signs up the owner, creates a worker
-# account, runs one worker round and checks that the worker reported in.
+# account, runs one worker round and checks that the worker reported in. Then
+# it restarts the app on the host network (docker-compose.host.yml).
 #
 #   TROYE_IMAGE=troye:dev TROYE_WORKER_IMAGE=troye-worker:dev deploy/smoke-test.sh
 #
@@ -25,7 +26,7 @@ trap cleanup EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 step() { echo "--- $*"; }
 
-cp "$here/docker-compose.yml" "$dir/"
+cp "$here/docker-compose.yml" "$here/docker-compose.host.yml" "$dir/"
 mkdir "$dir/pb_data"
 cat >"$dir/.env" <<ENV
 TROYE_IMAGE=${TROYE_IMAGE:-ghcr.io/kalfasyan/troye:latest}
@@ -70,5 +71,12 @@ docker compose run --rm worker python worker.py --once
 
 curl -sf -H "Authorization: $token" "$url/api/collections/workers/records" |
 	grep -q '"last_seen":"2' || fail "the worker did not report in"
+
+step "Restarting on the host network, with the same data"
+docker compose down
+COMPOSE_FILE=docker-compose.yml:docker-compose.host.yml docker compose up -d app
+for _ in $(seq 1 30); do curl -sf "$url/api/health" >/dev/null && break; sleep 1; done
+curl -sf "$url/api/health" >/dev/null || fail "the app did not become healthy on the host network"
+curl -sf "$url/api/app/setup" | grep -q '"needed":false' || fail "the data did not carry over"
 
 echo "OK"
