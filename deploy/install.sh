@@ -14,7 +14,7 @@ app=troye
 repo=${TROYE_REPO:-selfhostit/troye}
 source=${TROYE_SOURCE:-https://raw.githubusercontent.com/$repo/main/deploy}
 dir=${1:-${TROYE_DIR:-$HOME/$app}}
-files="docker-compose.yml docker-compose.tailscale.yml docker-compose.host.yml .env.example"
+files="docker-compose.yml docker-compose.tailscale.yml tailscale-serve.json docker-compose.host.yml .env.example"
 
 say() { printf '\033[1m%s\033[0m\n' "$*"; }
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
