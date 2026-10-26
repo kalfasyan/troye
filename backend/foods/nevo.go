@@ -68,7 +68,7 @@ func nevoRows(filename string, data []byte) ([][]string, error) {
 		// a zip with the download: use its CSV or Excel file
 		for _, f := range zr.File {
 			ext := strings.ToLower(path.Ext(f.Name))
-			if strings.Contains(strings.ToLower(f.Name), "nevo") && (ext == ".csv" || ext == ".txt" || ext == ".xlsx") {
+			if isNEVOTable(f.Name) && (ext == ".csv" || ext == ".txt" || ext == ".xlsx") {
 				r, err := f.Open()
 				if err != nil {
 					return nil, err
@@ -84,6 +84,21 @@ func nevoRows(filename string, data []byte) ([][]string, error) {
 		return nil, errors.New("the zip has no NEVO CSV or Excel file")
 	}
 	return csvRows(data)
+}
+
+// isNEVOTable tells the foods file in the download from the other tables next
+// to it (NEVO2025_v9.0_Details.csv, _Recepten_Recipes.csv and so on).
+func isNEVOTable(name string) bool {
+	name = strings.ToLower(path.Base(name))
+	if !strings.Contains(name, "nevo") {
+		return false
+	}
+	for _, other := range []string{"details", "nutrient", "recept", "recipe", "referen"} {
+		if strings.Contains(name, other) {
+			return false
+		}
+	}
+	return true
 }
 
 // csvRows reads CSV with whichever of | ; tab or , its header line uses.
@@ -132,7 +147,9 @@ func nevoFoods(rows [][]string) ([]Food, error) {
 		case strings.Contains(l, "hoeveelheid") || strings.Contains(l, "quantity"):
 			set("quantity")
 		default:
-			set(strings.ToUpper(h))
+			// the download adds the unit to the code: "ENERCC (kcal)"
+			code, _, _ := strings.Cut(h, " (")
+			set(strings.ToUpper(strings.TrimSpace(code)))
 		}
 	}
 	for _, need := range []string{"code", "nl", "ENERCC"} {
