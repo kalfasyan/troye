@@ -37,16 +37,49 @@ export interface MealPhoto extends RecordModel {
   status: PhotoStatus;
   items: DraftItem[] | null;
   /** what was logged in the end */
-  confirmed: { name: string; food: string; grams: number; kcal: number }[] | null;
+  confirmed: { name: string; food: string; grams: number; kcal: number; entry?: string }[] | null;
   model: string;
   error: string;
 }
 
 export interface AnalyserStatus {
   online: boolean;
+  /** whether the analyser has ever asked for work or finished a photo */
+  set_up: boolean;
   waiting: number;
   can_wake: boolean;
   seen: string;
+}
+
+/** How long ago a time was, in words: "just now", "5 min ago", "3 days ago". */
+export function ago(iso: string, now = new Date()): string {
+  const min = Math.floor((now.getTime() - new Date(iso).getTime()) / 60_000);
+  if (min < 2) return 'just now';
+  if (min < 60) return `${min} min ago`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return h === 1 ? 'an hour ago' : `${h} hours ago`;
+  const d = Math.floor(h / 24);
+  return d === 1 ? 'yesterday' : `${d} days ago`;
+}
+
+/** A plain line about the analyser on the PC, and what it means for photos. */
+export function analyserText(
+  a: AnalyserStatus,
+  woke: boolean,
+  now = new Date(),
+): { title: string; detail: string } {
+  if (a.online) return { title: 'Your PC is on', detail: 'It analyses photos as they come in.' };
+  if (woke) return { title: 'Waking your PC…', detail: 'This takes a minute or two.' };
+  if (!a.set_up) {
+    return {
+      title: "Photo analysis isn't set up yet",
+      detail: 'Photos wait here, safe, until the analyser runs on your PC.',
+    };
+  }
+  return {
+    title: 'Your PC is off',
+    detail: `${a.seen ? `Last seen ${ago(a.seen, now)}. ` : ''}Photos wait here until it's back on.`,
+  };
 }
 
 /** What an item comes to at some grams. */
