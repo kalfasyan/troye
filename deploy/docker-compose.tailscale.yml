@@ -15,18 +15,7 @@ services:
       TS_SERVE_CONFIG: /config/serve.json
     volumes:
       - ./tailscale:/var/lib/tailscale
-    configs:
-      - source: serve
-        target: /config/serve.json
+      # HTTPS on port 443 of the tailnet address, forwarded to the app. A file rather
+      # than an inline config, which the Docker Compose on a Synology can't read.
+      - ./tailscale-serve.json:/config/serve.json:ro
     mem_limit: 256m
-
-configs:
-  # HTTPS on port 443 of the tailnet address, forwarded to the app.
-  serve:
-    content: |
-      {
-        "TCP": { "443": { "HTTPS": true } },
-        "Web": {
-          "$${TS_CERT_DOMAIN}:443": { "Handlers": { "/": { "Proxy": "http://app:8090" } } }
-        }
-      }
