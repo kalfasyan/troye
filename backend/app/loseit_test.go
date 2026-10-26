@@ -4,11 +4,13 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"image"
 	"image/jpeg"
 	"mime/multipart"
 	"net/http"
 	"slices"
+	"strconv"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/tests"
@@ -57,8 +59,10 @@ func loseItZip(t testing.TB) []byte {
 func importBody(t testing.TB, data []byte, plan bool) (*bytes.Buffer, string) {
 	var body bytes.Buffer
 	w := multipart.NewWriter(&body)
-	part, _ := w.CreateFormFile("file", "loseit-export.zip")
-	_, _ = part.Write(data)
+	if data != nil {
+		part, _ := w.CreateFormFile("file", "loseit-export.zip")
+		_, _ = part.Write(data)
+	}
 	if plan {
 		_ = w.WriteField("plan", "true")
 	}
@@ -221,6 +225,60 @@ func TestImportLoseIt(t *testing.T) {
 		s.TestAppFactory = factory
 		s.DisableTestAppCleanup = true
 		s.Test(t)
+	}
+	a.Cleanup()
+}
+
+func partBody(t testing.TB, offset int, data []byte) (*bytes.Buffer, string) {
+	var body bytes.Buffer
+	w := multipart.NewWriter(&body)
+	_ = w.WriteField("offset", strconv.Itoa(offset))
+	part, _ := w.CreateFormFile("part", "part")
+	_, _ = part.Write(data)
+	_ = w.Close()
+	return &body, w.FormDataContentType()
+}
+
+func TestImportLoseItInParts(t *testing.T) {
+	a := newApp(t)
+	ada, token := addUser(t, a, "ada@example.com", "member")
+	factory := func(testing.TB) *tests.TestApp { return a }
+	zipped := loseItZip(t)
+	half := len(zipped) / 2
+
+	first, firstType := partBody(t, 0, zipped[:half])
+	again, againType := partBody(t, 0, zipped[:half])
+	gap, gapType := partBody(t, half+10, zipped[half:])
+	second, secondType := partBody(t, half, zipped[half:])
+	done, doneType := importBody(t, nil, false)
+	// no file and no parts left
+	empty, emptyType := importBody(t, nil, false)
+
+	post := func(name, url string, body *bytes.Buffer, contentType string, status int, content ...string) tests.ApiScenario {
+		return tests.ApiScenario{
+			Name: name, Method: http.MethodPost, URL: url, Body: body,
+			Headers:        map[string]string{"Authorization": token, "Content-Type": contentType},
+			ExpectedStatus: status, ExpectedContent: content,
+		}
+	}
+	parts := "/api/app/import/loseit/parts"
+	scenarios := []tests.ApiScenario{
+		post("the first half", parts, first, firstType, http.StatusOK, fmt.Sprintf(`"size":%d`, half)),
+		post("offset 0 starts over", parts, again, againType, http.StatusOK, fmt.Sprintf(`"size":%d`, half)),
+		post("a part that doesn't follow on", parts, gap, gapType, http.StatusConflict, fmt.Sprintf(`"size":%d`, half)),
+		post("the second half", parts, second, secondType, http.StatusOK, fmt.Sprintf(`"size":%d`, len(zipped))),
+		post("the parts are imported", "/api/app/import/loseit", done, doneType, http.StatusOK,
+			`"entries":{"added":4,"existing":0}`, `"photos":{"added":1,"existing":0}`),
+		post("and then removed", "/api/app/import/loseit", empty, emptyType, http.StatusBadRequest, "Choose the zip file"),
+	}
+	for i := range scenarios {
+		s := scenarios[i]
+		s.TestAppFactory = factory
+		s.DisableTestAppCleanup = true
+		s.Test(t)
+	}
+	if n, _ := a.CountRecords("entries"); n != 4 {
+		t.Errorf("%d entries for %s", n, ada.Id)
 	}
 	a.Cleanup()
 }

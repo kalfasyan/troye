@@ -8,6 +8,9 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/apis"
@@ -23,6 +26,10 @@ import (
 //
 // Importing is safe to repeat with a newer export: rows already imported are
 // skipped, and so are days that already have a weigh-in in Troye.
+//
+// The web app sends the export in parts of a few megabytes, which are put
+// together in pb_data/imports, so a big export with photos doesn't depend on
+// how large a request a proxy lets through or how long it waits.
 
 // Counted is how many of a kind of record were added, and how many were
 // already there.
@@ -51,24 +58,100 @@ type ImportResult struct {
 // photoMaxSize is the largest meal photo meal_photos takes.
 const photoMaxSize = 8 << 20
 
+// partMaxSize is the largest part of an upload; exportMaxSize the largest export.
+const (
+	partMaxSize   = 16 << 20
+	exportMaxSize = 1 << 30
+)
+
 func registerImport(app core.App) {
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		se.Router.POST("/api/app/import/loseit", importLoseIt).Bind(apis.RequireAuth("users"), apis.BodyLimit(1<<30))
+		users := apis.RequireAuth("users")
+		se.Router.POST("/api/app/import/loseit/parts", uploadPart).Bind(users, apis.BodyLimit(partMaxSize+1<<20))
+		se.Router.POST("/api/app/import/loseit", importLoseIt).Bind(users, apis.BodyLimit(exportMaxSize))
 		return se.Next()
 	})
 }
 
-func importLoseIt(e *core.RequestEvent) error {
-	file, header, err := e.Request.FormFile("file")
+// uploadPath is where a person's export is put together from its parts.
+func uploadPath(app core.App, user string) string {
+	return filepath.Join(app.DataDir(), "imports", "loseit-"+user+".zip")
+}
+
+// uploadPart adds a part of the export at its offset; offset 0 starts over.
+// A part that doesn't follow on gets 409 with the size so far.
+func uploadPart(e *core.RequestEvent) error {
+	offset, err := strconv.ParseInt(e.Request.FormValue("offset"), 10, 64)
+	if err != nil || offset < 0 {
+		return e.BadRequestError("Give the part's offset.", err)
+	}
+	part, _, err := e.Request.FormFile("part")
 	if err != nil {
-		return e.BadRequestError("Choose the zip file from Lose It!.", err)
+		return e.BadRequestError("Send a part of the export.", err)
 	}
-	defer file.Close()
-	ra, ok := file.(io.ReaderAt)
-	if !ok {
-		return e.BadRequestError("Couldn't read that file.", nil)
+	defer part.Close()
+
+	path := uploadPath(e.App, e.Auth.Id)
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return e.InternalServerError("", err)
 	}
-	x, err := loseit.Read(ra, header.Size)
+	flags := os.O_WRONLY | os.O_CREATE
+	if offset == 0 {
+		flags |= os.O_TRUNC
+	}
+	f, err := os.OpenFile(path, flags, 0o600)
+	if err != nil {
+		return e.InternalServerError("", err)
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return e.InternalServerError("", err)
+	}
+	if info.Size() != offset {
+		return e.JSON(http.StatusConflict, map[string]any{"message": "That part doesn't follow on.", "size": info.Size()})
+	}
+	if _, err := f.Seek(offset, io.SeekStart); err != nil {
+		return e.InternalServerError("", err)
+	}
+	n, err := io.Copy(f, io.LimitReader(part, partMaxSize+1))
+	if err != nil {
+		return e.InternalServerError("", err)
+	}
+	if n > partMaxSize || offset+n > exportMaxSize {
+		_ = f.Truncate(offset)
+		return e.Error(http.StatusRequestEntityTooLarge, "That export is too big.", nil)
+	}
+	return e.JSON(http.StatusOK, map[string]any{"size": offset + n})
+}
+
+// importLoseIt imports the export sent with the request, or else the one put
+// together from parts, which is removed afterwards.
+func importLoseIt(e *core.RequestEvent) error {
+	var ra io.ReaderAt
+	var size int64
+	if file, header, err := e.Request.FormFile("file"); err == nil {
+		defer file.Close()
+		r, ok := file.(io.ReaderAt)
+		if !ok {
+			return e.BadRequestError("Couldn't read that file.", nil)
+		}
+		ra, size = r, header.Size
+	} else {
+		path := uploadPath(e.App, e.Auth.Id)
+		f, err := os.Open(path)
+		if err != nil {
+			return e.BadRequestError("Choose the zip file from Lose It!.", err)
+		}
+		defer os.Remove(path)
+		defer f.Close()
+		info, err := f.Stat()
+		if err != nil {
+			return e.InternalServerError("", err)
+		}
+		ra, size = f, info.Size()
+	}
+	x, err := loseit.Read(ra, size)
 	if errors.Is(err, loseit.ErrNotExport) {
 		return e.BadRequestError("That doesn't look like a Lose It! export. Choose the zip file Lose It! emailed you.", err)
 	}
@@ -82,8 +165,9 @@ func importLoseIt(e *core.RequestEvent) error {
 	return e.JSON(http.StatusOK, result)
 }
 
-// ImportLoseIt saves an export for a user, all of it or nothing. With plan,
-// the export's plan and fasting schedule replace the user's.
+// ImportLoseIt saves an export for a user: the records all or nothing, then
+// the photos one by one, so they aren't all held in memory until the end.
+// With plan, the export's plan and fasting schedule replace the user's.
 func ImportLoseIt(app core.App, user string, x *loseit.Export, plan bool) (ImportResult, error) {
 	r := ImportResult{Unweighed: x.Unweighed, Unused: x.Unused}
 	if r.Unused == nil {
@@ -91,7 +175,7 @@ func ImportLoseIt(app core.App, user string, x *loseit.Export, plan bool) (Impor
 	}
 	err := app.RunInTransaction(func(tx core.App) error {
 		steps := []func(core.App, string, *loseit.Export, *ImportResult) error{
-			importWeighins, importEntries, importExercises, importFoods, importPhotos,
+			importWeighins, importEntries, importExercises, importFoods,
 		}
 		for _, step := range steps {
 			if err := step(tx, user, x, &r); err != nil {
@@ -103,7 +187,10 @@ func ImportLoseIt(app core.App, user string, x *loseit.Export, plan bool) (Impor
 		}
 		return nil
 	})
-	return r, err
+	if err != nil {
+		return r, err
+	}
+	return r, importPhotos(app, user, x, &r)
 }
 
 // existing is the set of values a user's records have in a field.

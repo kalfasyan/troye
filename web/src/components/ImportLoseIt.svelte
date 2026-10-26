@@ -1,7 +1,7 @@
 <script lang="ts">
   import { diary } from '../lib/diary.svelte';
-  import { summary, type ImportResult } from '../lib/loseit';
-  import { errorMessage, pb } from '../lib/pb';
+  import { importExport, summary, UnreadableFile, type ImportResult } from '../lib/loseit';
+  import { errorMessage } from '../lib/pb';
   import { profile } from '../lib/profile.svelte';
   import { weight } from '../lib/weight.svelte';
   import Sheet from './Sheet.svelte';
@@ -13,6 +13,8 @@
 
   let plan = $state(false);
   let busy = $state(false);
+  // how much of the file is sent, 0 to 1
+  let progress = $state(0);
   let error = $state('');
   let result = $state<ImportResult | null>(null);
   let fileInput = $state<HTMLInputElement>();
@@ -23,18 +25,15 @@
     busy = true;
     error = '';
     result = null;
+    progress = 0;
     try {
-      const body = new FormData();
-      body.append('file', file);
-      if (plan) body.append('plan', 'true');
-      result = await pb.send<ImportResult>('/api/app/import/loseit', {
-        method: 'POST',
-        body,
-        requestKey: null,
-      });
+      result = await importExport(file, plan, (p) => (progress = p));
       await Promise.all([profile.load(), diary.load(), weight.load()]);
     } catch (err) {
-      error = errorMessage(err, "Couldn't import that file. Please try again.");
+      error =
+        err instanceof UnreadableFile
+          ? "Couldn't read that file on this device. If it's in iCloud, Google Drive or another cloud folder, download it to the device first."
+          : errorMessage(err, "Couldn't import that file. Please try again.");
     } finally {
       busy = false;
       if (fileInput) fileInput.value = '';
@@ -59,7 +58,11 @@
     </label>
 
     <label class="btn-primary block cursor-pointer text-center" class:opacity-50={busy}>
-      {busy ? 'Importing…' : 'Choose the export'}
+      {busy
+        ? progress < 1
+          ? `Uploading ${Math.round(progress * 100)}%`
+          : 'Importing…'
+        : 'Choose the export'}
       <input
         bind:this={fileInput}
         type="file"
@@ -70,9 +73,16 @@
       />
     </label>
     {#if busy}
-      <p class="text-sm text-zinc-500 dark:text-zinc-400">
-        A big export with photos can take a minute to upload.
-      </p>
+      <div
+        class="h-1.5 overflow-hidden rounded-full bg-orange-100 dark:bg-zinc-800"
+        role="progressbar"
+        aria-label="Upload"
+        aria-valuenow={Math.round(progress * 100)}
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
+        <div class="h-full rounded-full bg-orange-500" style="width: {progress * 100}%"></div>
+      </div>
     {/if}
 
     {#if result}
