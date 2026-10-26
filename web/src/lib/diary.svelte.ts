@@ -97,10 +97,8 @@ class Diary {
     await pb.collection('entries').delete(entry.id);
     this.entries = this.entries.filter((e) => e.id !== entry.id);
     return async () => {
-      const { user, date, meal, food, name, grams, kcal } = entry;
-      const back = await pb
-        .collection('entries')
-        .create<Entry>({ user, date, meal, food, name, grams, kcal }, { expand: 'food' });
+      const { id, created, updated, collectionId, collectionName, expand, ...values } = entry;
+      const back = await pb.collection('entries').create<Entry>(values, { expand: 'food' });
       this.put(back);
     };
   }

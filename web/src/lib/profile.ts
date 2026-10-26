@@ -12,6 +12,7 @@ export type Motivation =
   'health' | 'energy' | 'confidence' | 'fitness' | 'event' | 'mood' | 'family' | 'longevity';
 export type Diet = 'balanced' | 'high_protein' | 'low_carb';
 export type Units = 'metric' | 'imperial';
+export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 
 /** The answers, as the profiles collection stores them (always metric). */
 export interface Answers {
@@ -25,6 +26,8 @@ export interface Answers {
   pace_kg: number;
   fasting: Fasting;
   eating_start: string;
+  /** the days a fast starts on; none is every day */
+  fasting_days: Weekday[];
   motivations: Motivation[];
   why: string;
   diet: Diet;
@@ -69,6 +72,7 @@ export const blankAnswers = (): Answers => ({
   pace_kg: 0.5,
   fasting: 'none',
   eating_start: '12:00',
+  fasting_days: [],
   motivations: [],
   why: '',
   diet: 'balanced',
@@ -123,6 +127,25 @@ export const fastings: { id: Fasting; label: string; hint: string; hours: number
   { id: '20_4', label: '20:4', hint: 'A 4 hour eating window', hours: 20 },
   { id: 'omad', label: 'One meal a day', hint: 'About a 1 hour eating window', hours: 23 },
 ];
+
+export const weekdays: { id: Weekday; label: string }[] = [
+  { id: 'mon', label: 'Mon' },
+  { id: 'tue', label: 'Tue' },
+  { id: 'wed', label: 'Wed' },
+  { id: 'thu', label: 'Thu' },
+  { id: 'fri', label: 'Fri' },
+  { id: 'sat', label: 'Sat' },
+  { id: 'sun', label: 'Sun' },
+];
+
+/** The fasting days as "every day" or "Mon, Tue, Thu". */
+export function fastingDaysLabel(days: Weekday[] | undefined): string {
+  if (!days?.length || days.length === 7) return 'every day';
+  return weekdays
+    .filter((d) => days.includes(d.id))
+    .map((d) => d.label)
+    .join(', ');
+}
 
 export const diets: { id: Diet; label: string; hint: string }[] = [
   { id: 'balanced', label: 'Balanced', hint: '50% carbs, 20% protein, 30% fat' },

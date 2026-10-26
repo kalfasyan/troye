@@ -40,7 +40,34 @@ export interface Entry extends RecordModel {
   protein: number;
   carbs: number;
   fat: number;
+  /** as it was logged, such as "2 Tablespoons", for imported entries */
+  amount?: string;
+  fiber?: number;
+  sugar?: number;
+  sat_fat?: number;
+  salt?: number;
+  /** milligrams */
+  cholesterol?: number;
   expand?: { food?: Food };
+}
+
+/** How much of something was eaten: as logged, or in grams. */
+export function entryAmount(e: Pick<Entry, 'amount' | 'grams'>): string {
+  return e.amount || (e.grams ? `${e.grams} g` : '');
+}
+
+/** The nutrients beyond the macros that an entry has, to show with it. */
+export function moreNutrients(
+  e: Pick<Entry, 'fiber' | 'sugar' | 'sat_fat' | 'salt' | 'cholesterol'>,
+): string[] {
+  const list: [string, number | undefined, string][] = [
+    ['fiber', e.fiber, 'g'],
+    ['sugar', e.sugar, 'g'],
+    ['saturated fat', e.sat_fat, 'g'],
+    ['salt', e.salt, 'g'],
+    ['cholesterol', e.cholesterol, 'mg'],
+  ];
+  return list.filter(([, v]) => v).map(([label, v, unit]) => `${v} ${unit} ${label}`);
 }
 
 export interface Totals {

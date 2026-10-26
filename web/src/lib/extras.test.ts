@@ -31,6 +31,15 @@ describe('fastingState', () => {
     expect(s.progress).toBeCloseTo(2 / 8);
   });
 
+  it('skips the days off', () => {
+    // 2026-10-24 is a Saturday; the window closes at 20:00 and a fast would start
+    expect(fastingState(at('14:00'), '12:00', '16_8', ['fri'])).toBeNull();
+    expect(fastingState(at('14:00'), '12:00', '16_8', ['sat'])?.eating).toBe(true);
+    // Friday's fast runs into Saturday morning
+    expect(fastingState(at('10:00'), '12:00', '16_8', ['fri'])?.eating).toBe(false);
+    expect(fastingState(at('10:00'), '12:00', '16_8', ['sat'])).toBeNull();
+  });
+
   it('handles a window across midnight', () => {
     const s = fastingState(at('01:00'), '18:30', '16_8')!;
     expect(s.eating).toBe(true);

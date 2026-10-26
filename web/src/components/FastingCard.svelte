@@ -1,9 +1,13 @@
 <script lang="ts">
   import { fastingState, formatDuration } from '../lib/extras';
-  import { fastings, type Fasting } from '../lib/profile';
+  import { fastings, type Fasting, type Weekday } from '../lib/profile';
 
   // Today's fasting window: how long until it opens, or until it closes.
-  let { start, fasting }: { start: string; fasting: Fasting } = $props();
+  let {
+    start,
+    fasting,
+    days = [],
+  }: { start: string; fasting: Fasting; days?: Weekday[] } = $props();
 
   let now = $state(new Date());
   $effect(() => {
@@ -11,7 +15,7 @@
     return () => clearInterval(t);
   });
 
-  const fast = $derived(fastingState(now, start, fasting));
+  const fast = $derived(fastingState(now, start, fasting, days));
   const time = (d: Date) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 </script>
 

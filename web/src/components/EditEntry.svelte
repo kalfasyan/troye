@@ -1,5 +1,13 @@
 <script lang="ts">
-  import { amountOf, meals, portions, type Entry, type Meal } from '../lib/diary';
+  import {
+    amountOf,
+    entryAmount,
+    meals,
+    moreNutrients,
+    portions,
+    type Entry,
+    type Meal,
+  } from '../lib/diary';
   import { diary } from '../lib/diary.svelte';
   import { errorMessage } from '../lib/pb';
   import Sheet from './Sheet.svelte';
@@ -80,6 +88,21 @@
         Calories
         <input type="number" inputmode="numeric" min="1" max="20000" required bind:value={kcal} />
       </label>
+      {#if entry.amount || entry.protein || entry.carbs || entry.fat}
+        <p class="text-sm text-zinc-600 dark:text-zinc-400">
+          {[
+            entryAmount(entry),
+            `${entry.carbs} g carbs · ${entry.protein} g protein · ${entry.fat} g fat`,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      {/if}
+    {/if}
+    {#if !food && moreNutrients(entry).length}
+      <p class="-mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+        {moreNutrients(entry).join(' · ')}
+      </p>
     {/if}
 
     {#if error}<p class="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>{/if}

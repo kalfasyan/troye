@@ -3,7 +3,9 @@ import {
   addDays,
   amountOf,
   dayLabel,
+  entryAmount,
   foodName,
+  moreNutrients,
   portions,
   recentFoods,
   sum,
@@ -74,5 +76,21 @@ describe('foodName', () => {
     expect(foodName(rice, 'nl')).toBe('Rijst, gekookt');
     expect(foodName(rice, 'fr')).toBe('Rice, cooked');
     expect(foodName(rice, '')).toBe('Rice, cooked');
+  });
+});
+
+describe('imported entries', () => {
+  it('show the amount as logged, or the grams', () => {
+    expect(entryAmount({ amount: '2 Tablespoons', grams: 0 })).toBe('2 Tablespoons');
+    expect(entryAmount({ amount: '', grams: 150 })).toBe('150 g');
+    expect(entryAmount({ grams: 0 })).toBe('');
+  });
+
+  it('list the nutrients they have', () => {
+    expect(moreNutrients({ fiber: 3.1, sugar: 0, salt: 0.65, cholesterol: 40 })).toEqual([
+      '3.1 g fiber',
+      '0.65 g salt',
+      '40 mg cholesterol',
+    ]);
   });
 });

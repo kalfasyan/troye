@@ -6,6 +6,7 @@
     cmToFtIn,
     diets,
     eatingEnd,
+    fastingDaysLabel,
     fastings,
     formatPace,
     formatWeight,
@@ -15,9 +16,11 @@
     lbToKg,
     motivations,
     paces,
+    weekdays,
     type Answers,
     type Motivation,
     type Plan,
+    type Weekday,
   } from '../lib/profile';
   import { previewPlan, profile } from '../lib/profile.svelte';
   import { session } from '../lib/session.svelte';
@@ -43,6 +46,15 @@
   if (!a.eating_start) a.eating_start = '12:00';
   if (!a.pace_kg) a.pace_kg = 0.5;
   a.motivations ??= [];
+  a.fasting_days ??= [];
+
+  // no days chosen is every day; the last day can't be taken off
+  function toggleDay(day: Weekday) {
+    const on = a.fasting_days.length ? a.fasting_days : weekdays.map((d) => d.id);
+    const next = on.includes(day) ? on.filter((d) => d !== day) : [...on, day];
+    if (!next.length) return;
+    a.fasting_days = next.length === weekdays.length ? [] : next;
+  }
 
   const firstName = (session.user?.name || '').split(' ')[0];
 
@@ -405,6 +417,23 @@
         <p class="text-sm text-zinc-500 dark:text-zinc-400">
           You'd eat from {a.eating_start} to {eatingEnd(a.eating_start, a.fasting)}.
         </p>
+        <fieldset>
+          <legend class="text-sm font-medium">On these days</legend>
+          <div class="mt-1 grid grid-cols-7 gap-1">
+            {#each weekdays as d (d.id)}
+              <button
+                type="button"
+                class="chip px-0 py-1.5"
+                class:chosen={!a.fasting_days.length || a.fasting_days.includes(d.id)}
+                aria-pressed={!a.fasting_days.length || a.fasting_days.includes(d.id)}
+                onclick={() => toggleDay(d.id)}>{d.label}</button
+              >
+            {/each}
+          </div>
+          <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            A day's fast starts when its eating window closes.
+          </p>
+        </fieldset>
       {/if}
     {:else if step === 'diet'}
       {#each diets as d (d.id)}
@@ -440,7 +469,11 @@
         <dd>{plan.bmi}</dd>
         {#if a.fasting !== 'none'}
           <dt class="text-zinc-500 dark:text-zinc-400">Eating</dt>
-          <dd>{a.eating_start} to {eatingEnd(a.eating_start, a.fasting)}</dd>
+          <dd>
+            {a.eating_start} to {eatingEnd(a.eating_start, a.fasting)}, {fastingDaysLabel(
+              a.fasting_days,
+            )}
+          </dd>
         {/if}
       </dl>
       {#if plan.floored}
