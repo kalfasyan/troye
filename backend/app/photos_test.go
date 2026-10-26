@@ -83,8 +83,8 @@ func TestPhotoFlow(t *testing.T) {
 	addFood(t, a, "Rice pudding with caramel", "", 140, 3)
 	chicken := addFood(t, a, "Chicken breast, roasted", "", 165, 31)
 
-	// the analyser is off until it asks for work
-	if code, s := call(t, a, "GET", "/api/app/analyser", adaToken, ""); code != 200 || s["online"] != false {
+	// the analyser is off, and not set up, until it asks for work
+	if code, s := call(t, a, "GET", "/api/app/analyser", adaToken, ""); code != 200 || s["online"] != false || s["set_up"] != false {
 		t.Fatalf("status %d %v", code, s)
 	}
 
@@ -96,7 +96,7 @@ func TestPhotoFlow(t *testing.T) {
 	if code, _ := call(t, a, "POST", "/api/app/photos/claim", worker, ""); code != http.StatusNoContent {
 		t.Errorf("second claim %d, want nothing to do", code)
 	}
-	if _, s := call(t, a, "GET", "/api/app/analyser", adaToken, ""); s["online"] != true || s["waiting"] != 1.0 {
+	if _, s := call(t, a, "GET", "/api/app/analyser", adaToken, ""); s["online"] != true || s["set_up"] != true || s["waiting"] != 1.0 {
 		t.Errorf("status after a claim: %v", s)
 	}
 	// the download link works without other credentials

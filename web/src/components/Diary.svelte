@@ -18,11 +18,12 @@
   import { profile } from '../lib/profile.svelte';
   import AddExercise from './AddExercise.svelte';
   import AddFood from './AddFood.svelte';
+  import AnalyserCard from './AnalyserCard.svelte';
   import EditEntry from './EditEntry.svelte';
   import FastingCard from './FastingCard.svelte';
   import MealPhotos from './MealPhotos.svelte';
+  import PendingPhotos from './PendingPhotos.svelte';
   import PhotoReview from './PhotoReview.svelte';
-  import PhotoStrip from './PhotoStrip.svelte';
   import Ring from './Ring.svelte';
   import WaterCard from './WaterCard.svelte';
   import WeekSheet from './Week.svelte';
@@ -200,7 +201,7 @@
   <FastingCard start={plan.eating_start} fasting={plan.fasting} days={plan.fasting_days} />
 {/if}
 
-<PhotoStrip day={diary.day} onopen={(p) => (reviewing = p)} />
+<AnalyserCard otherDays />
 
 {#each meals as m (m.id)}
   {@const items = diary.byMeal(m.id)}
@@ -231,11 +232,11 @@
         {/each}
       </ul>
     {/if}
-    <MealPhotos
-      list={photos.logged.filter((p) => p.meal === m.id)}
-      title={m.label}
-      onerror={(msg) => (diary.error = msg)}
+    <PendingPhotos
+      list={photos.forDay(diary.day).filter((p) => p.meal === m.id)}
+      onopen={(p) => (reviewing = p)}
     />
+    <MealPhotos list={photos.logged.filter((p) => p.meal === m.id)} title={m.label} />
     <button
       class="w-full rounded-b-2xl px-5 py-3 text-left text-sm font-semibold text-brand-600 hover:bg-zinc-50 dark:text-brand-400 dark:hover:bg-zinc-800/50"
       onclick={() => (adding = m.id)}>+ Add food</button
@@ -293,7 +294,11 @@
 {/if}
 
 {#if adding}
-  <AddFood meal={adding} onclose={() => (adding = null)} />
+  <AddFood
+    meal={adding}
+    onclose={() => (adding = null)}
+    onreview={(p) => ((adding = null), (reviewing = p))}
+  />
 {/if}
 {#if reviewing}
   <PhotoReview photo={reviewing} onclose={() => (reviewing = null)} />

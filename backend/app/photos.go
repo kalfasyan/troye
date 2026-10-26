@@ -526,16 +526,24 @@ func rememberAlias(app core.App, user, name, food string, grams float64) error {
 	return app.Save(r)
 }
 
-// analyserStatus tells the phone whether the analyser is on and how many of
-// the person's photos wait for it.
+// analyserStatus tells the phone whether the analyser is on, whether it has
+// ever been, and how many of the person's photos wait for it.
 func analyserStatus(e *core.RequestEvent) error {
 	seen, _ := e.App.Store().Get(analyserSeenKey).(time.Time)
 	waiting, err := e.App.CountRecords("meal_photos", dbx.HashExp{"user": e.Auth.Id, "status": []any{"queued", "analysing"}})
 	if err != nil {
 		return e.InternalServerError("", err)
 	}
+	// an analyser that has never finished a photo is most likely not set up
+	// yet, which the phone explains differently from a PC that is off
+	setUp := !seen.IsZero()
+	if !setUp {
+		_, err := e.App.FindFirstRecordByFilter("meal_photos", "analysed_at != ''")
+		setUp = err == nil
+	}
 	res := map[string]any{
 		"online":   !seen.IsZero() && time.Since(seen) < analyserTimeout,
+		"set_up":   setUp,
 		"waiting":  waiting,
 		"can_wake": os.Getenv("TROYE_WAKE_MAC") != "",
 		"seen":     "",

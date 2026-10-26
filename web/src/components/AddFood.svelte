@@ -3,14 +3,22 @@
   import { amountOf, foodName, meals, portions, type Food, type Meal } from '../lib/diary';
   import { diary, lookupBarcode, saveCustomFood, searchFoods } from '../lib/diary.svelte';
   import { errorMessage } from '../lib/pb';
+  import { statusText, type MealPhoto } from '../lib/photos';
   import { photos } from '../lib/photos.svelte';
   import { profile } from '../lib/profile.svelte';
+  import AnalyserCard from './AnalyserCard.svelte';
   import BarcodeScanner from './BarcodeScanner.svelte';
   import Sheet from './Sheet.svelte';
 
-  // Adding food to a meal: search (recent foods first), scan a barcode, make a
-  // custom food, or quick-add calories. Picking a food asks how much.
-  let { meal: startMeal, onclose }: { meal: Meal; onclose: () => void } = $props();
+  // Adding food to a meal: search (recent foods first), take a photo, scan a
+  // barcode, make a custom food, or quick-add calories. Picking a food asks how
+  // much. A photo is sent the moment it is taken, so it is never lost, and the
+  // sheet then says where it is and whether the PC is there to analyse it.
+  let {
+    meal: startMeal,
+    onclose,
+    onreview,
+  }: { meal: Meal; onclose: () => void; onreview: (p: MealPhoto) => void } = $props();
 
   type View = 'search' | 'amount' | 'scan' | 'custom' | 'quick' | 'photo';
   let view = $state<View>('search');
@@ -44,10 +52,13 @@
   });
   let quick = $state({ name: '', kcal: undefined as number | undefined });
 
-  // the photo step: the picked photo and a note for the analyser
+  // the photo step: the picked photo, the queued record, and a note for the analyser
   let photoFile = $state<File | null>(null);
   let photoPreview = $state('');
   let photoNote = $state('');
+  let sent = $state<MealPhoto | null>(null);
+  // the queued photo as it changes, so the sheet shows it being analysed
+  const live = $derived(sent ? (photos.pending.find((p) => p.id === sent!.id) ?? sent) : null);
 
   function pickedPhoto(e: Event) {
     const file = (e.currentTarget as HTMLInputElement).files?.[0];
@@ -55,8 +66,9 @@
     if (photoPreview) URL.revokeObjectURL(photoPreview);
     photoFile = file;
     photoPreview = URL.createObjectURL(file);
-    error = '';
+    sent = null;
     view = 'photo';
+    sendPhoto();
   }
 
   async function sendPhoto() {
@@ -64,13 +76,29 @@
     busy = true;
     error = '';
     try {
-      await photos.add(photoFile, meal, diary.day, photoNote.trim());
-      onclose();
+      sent = await photos.add(photoFile, meal, diary.day, '');
     } catch (err) {
       error = errorMessage(err, "Couldn't send the photo. Please try again.");
     } finally {
       busy = false;
     }
+  }
+
+  /** Saves a changed note or meal on the sent photo, then closes. */
+  async function donePhoto() {
+    const p = live;
+    const note = photoNote.trim();
+    if (p && p.status !== 'logged' && (note !== p.note || meal !== p.meal)) {
+      busy = true;
+      try {
+        await photos.edit(p, { note, meal });
+      } catch (err) {
+        error = errorMessage(err, "Couldn't save the note.");
+        busy = false;
+        return;
+      }
+    }
+    onclose();
   }
 
   onMount(() => {
@@ -207,7 +235,14 @@
   </li>
 {/snippet}
 
-<Sheet title={titles[view]} onclose={view === 'search' ? onclose : () => (view = 'search')}>
+<Sheet
+  title={view === 'photo' && sent ? 'Photo received' : titles[view]}
+  onclose={view === 'search'
+    ? onclose
+    : view === 'photo' && sent
+      ? donePhoto
+      : () => (view = 'search')}
+>
   <div class="mb-4 flex gap-1 overflow-x-auto" role="radiogroup" aria-label="Meal">
     {#each meals as m (m.id)}
       <button
@@ -384,23 +419,52 @@
   {:else if view === 'photo'}
     <div class="flex flex-1 flex-col gap-3">
       {#if photoPreview}
-        <img src={photoPreview} alt="Your meal" class="max-h-72 w-full rounded-2xl object-cover" />
+        <img src={photoPreview} alt="Your meal" class="max-h-64 w-full rounded-2xl object-cover" />
       {/if}
-      <label
-        >Anything it can't see? (optional)
-        <input
-          maxlength="200"
-          placeholder="Cooked in butter, no sauce"
-          bind:value={photoNote}
-        /></label
-      >
-      <p class="text-sm text-zinc-600 dark:text-zinc-400">
-        Your PC names what's on the plate and weighs it by eye, and the calories come from the food
-        tables. You check it before it goes in your diary.
-      </p>
-      <button class="btn-primary mt-auto" disabled={busy} onclick={sendPhoto}
-        >{busy ? 'Sending…' : 'Analyse photo'}</button
-      >
+      {#if live}
+        <div class="card flex items-center gap-4" role="status">
+          <img
+            src={live.status === 'ready'
+              ? '/brand/plato-cheer.svg'
+              : live.status === 'failed'
+                ? '/brand/plato.svg'
+                : '/brand/plato-thinking.svg'}
+            alt=""
+            class="size-14 shrink-0"
+          />
+          <div class="min-w-0">
+            <p class="font-medium">{statusText(live, photos.analyser.online)}</p>
+            <p class="text-sm text-zinc-500 dark:text-zinc-400">
+              {#if live.status === 'ready'}
+                Check what it found before it goes in your diary.
+              {:else if live.status === 'failed'}
+                {live.error}
+              {:else}
+                It's saved under {meals.find((m) => m.id === live.meal)?.label.toLowerCase()} in your
+                diary. You'll get a notification when it's ready to check.
+              {/if}
+            </p>
+          </div>
+        </div>
+        {#if live.status === 'ready' || live.status === 'failed'}
+          <button class="btn-primary" onclick={() => onreview(live)}>Check it now</button>
+        {:else}
+          <AnalyserCard always />
+          <label
+            >Anything it can't see? (optional)
+            <input
+              maxlength="200"
+              placeholder="Cooked in butter, no sauce"
+              bind:value={photoNote}
+            /></label
+          >
+        {/if}
+        <button class="btn-secondary mt-auto" disabled={busy} onclick={donePhoto}>Done</button>
+      {:else if busy}
+        <p class="text-sm text-zinc-600 dark:text-zinc-400" role="status">Sending your photo…</p>
+      {:else}
+        <button class="btn-primary mt-auto" onclick={sendPhoto}>Try again</button>
+      {/if}
     </div>
   {:else if view === 'quick'}
     <form class="flex flex-1 flex-col gap-3" onsubmit={saveQuick}>
