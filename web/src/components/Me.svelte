@@ -2,11 +2,12 @@
   import { pb } from '../lib/pb';
   import { foodLanguages } from '../lib/diary';
   import { install } from '../lib/install.svelte';
-  import { eatingEnd, fastings, motivations } from '../lib/profile';
+  import { eatingEnd, fastingDaysLabel, fastings, motivations } from '../lib/profile';
   import { profile } from '../lib/profile.svelte';
   import { session } from '../lib/session.svelte';
   import Accuracy from './Accuracy.svelte';
   import FoodData from './FoodData.svelte';
+  import ImportLoseIt from './ImportLoseIt.svelte';
   import Notifications from './Notifications.svelte';
 
   // The person's plan, their "why", notifications and account.
@@ -20,6 +21,7 @@
         .join(' · '),
   );
   let showFoodData = $state(false);
+  let showImport = $state(false);
   const version = pb
     .send<{ version: string }>('/api/app/info', {})
     .then((i) => i.version)
@@ -45,7 +47,7 @@
   {#if plan.fasting !== 'none'}
     <p class="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
       {fastings.find((f) => f.id === plan.fasting)?.label} fasting: eat from {plan.eating_start}
-      to {eatingEnd(plan.eating_start, plan.fasting)}
+      to {eatingEnd(plan.eating_start, plan.fasting)}, {fastingDaysLabel(plan.fasting_days)}
     </p>
   {/if}
 </section>
@@ -93,6 +95,11 @@
 <button class="btn-secondary" onclick={() => (showFoodData = true)}>Food data and sources</button>
 {#if showFoodData}
   <FoodData onclose={() => (showFoodData = false)} />
+{/if}
+
+<button class="btn-secondary" onclick={() => (showImport = true)}>Import from Lose It!</button>
+{#if showImport}
+  <ImportLoseIt onclose={() => (showImport = false)} />
 {/if}
 
 <section class="card text-sm text-zinc-600 dark:text-zinc-400">

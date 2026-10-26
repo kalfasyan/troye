@@ -1,5 +1,5 @@
 import type { RecordModel } from 'pocketbase';
-import { fastings, type Fasting } from './profile';
+import { fastings, weekdays, type Fasting, type Weekday } from './profile';
 
 // Water, exercise, the fasting window and the week's summary.
 
@@ -10,8 +10,19 @@ export interface Water extends RecordModel {
   ml: number;
 }
 
+// tracker is the extra calories an activity tracker counted, as Lose It! imports them
 export type ExerciseKind =
-  'walk' | 'dog_walk' | 'run' | 'cycle' | 'swim' | 'strength' | 'yoga' | 'hike' | 'sport' | 'other';
+  | 'walk'
+  | 'dog_walk'
+  | 'run'
+  | 'cycle'
+  | 'swim'
+  | 'strength'
+  | 'yoga'
+  | 'hike'
+  | 'sport'
+  | 'other'
+  | 'tracker';
 
 /** An exercise; the server works out kcal from the kind, minutes and weight unless one is given. */
 export interface Exercise extends RecordModel {
@@ -38,7 +49,9 @@ export const exerciseKinds: { id: ExerciseKind; label: string; met: number }[] =
 ];
 
 export const kindLabel = (kind: ExerciseKind) =>
-  exerciseKinds.find((k) => k.id === kind)?.label ?? 'Exercise';
+  kind === 'tracker'
+    ? 'Activity tracker'
+    : (exerciseKinds.find((k) => k.id === kind)?.label ?? 'Exercise');
 
 /** The calories an exercise burns above resting: (MET - 1) x kg x hours. */
 export function exerciseKcal(kind: ExerciseKind, minutes: number, kg: number): number {
@@ -57,8 +70,16 @@ export interface FastingState {
   progress: number;
 }
 
-/** Where the day is in the fasting plan; null without one. */
-export function fastingState(now: Date, start: string, fasting: Fasting): FastingState | null {
+/**
+ * Where the day is in the fasting plan; null without one, or between fasts
+ * when the plan has days off. A fast belongs to the day it starts on.
+ */
+export function fastingState(
+  now: Date,
+  start: string,
+  fasting: Fasting,
+  days: Weekday[] = [],
+): FastingState | null {
   const hours = fastings.find((f) => f.id === fasting)?.hours ?? 0;
   if (!hours) return null;
   const [h, m] = start.split(':').map(Number);
@@ -67,6 +88,9 @@ export function fastingState(now: Date, start: string, fasting: Fasting): Fastin
   if (opens > now) opens.setDate(opens.getDate() - 1);
   const window = (24 - hours) * 3600_000;
   const closes = new Date(opens.getTime() + window);
+  // the fast that ends this window, or that this is
+  const day = weekdays[(closes.getDay() + 6) % 7].id;
+  if (days.length && !days.includes(day)) return null;
   if (now < closes) {
     return { eating: true, until: closes, progress: (now.getTime() - opens.getTime()) / window };
   }

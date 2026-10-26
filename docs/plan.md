@@ -91,3 +91,4 @@ Each step is one PR that leaves the app working.
 5. Photo logging: capture, storage, queue, the Ollama vision worker, confirm screen, push.
 6. Accuracy loop: score models on confirmed photos, so the model is picked by numbers.
 7. Extras: fasting timer, water, exercise, weekly summary.
+8. Lose It! import: the food log, weigh-ins, exercise, own foods, meal photos and plan from an export, with the nutrients, fasting days and tracker calories it needed.

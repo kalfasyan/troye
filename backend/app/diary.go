@@ -50,11 +50,14 @@ func fillEntry(app core.App, entry *core.Record) error {
 		entry.Set("name", foods.Name(food, lang))
 	}
 	factor := entry.GetFloat("grams") / 100
-	for _, field := range []string{"kcal", "protein", "carbs", "fat"} {
+	for _, field := range []string{"kcal", "protein", "carbs", "fat", "fiber", "sugar", "salt"} {
 		v := food.GetFloat(field) * factor
-		if field == "kcal" {
+		switch field {
+		case "kcal":
 			v = math.Round(v)
-		} else {
+		case "salt":
+			v = math.Round(v*100) / 100
+		default:
 			v = math.Round(v*10) / 10
 		}
 		entry.Set(field, v)

@@ -4,10 +4,14 @@ import { pb } from './pb';
 import { sha256, shrink, type AnalyserStatus, type MealPhoto } from './photos';
 import { session } from './session.svelte';
 
-// The person's photos that aren't in the diary yet, and whether the analyser
-// on the PC is on. Both stay live: a draft shows up the moment it is ready.
+// The person's photos that aren't in the diary yet, the photos of the meals
+// of the day the diary shows, and whether the analyser on the PC is on. They
+// stay live: a draft shows up the moment it is ready.
 class Photos {
   pending = $state<MealPhoto[]>([]);
+  /** the logged photos of the day the diary shows */
+  logged = $state<MealPhoto[]>([]);
+  private loggedDay = '';
   analyser = $state<AnalyserStatus>({ online: false, waiting: 0, can_wake: false, seen: '' });
   // one token request shared by every photo on the screen
   private token: Promise<string> | null = null;
@@ -23,6 +27,32 @@ class Photos {
       p.status === 'logged'
         ? rest
         : [...rest, p].sort((a, b) => a.created.localeCompare(b.created));
+    this.logged = this.logged.filter((x) => x.id !== p.id);
+    if (p.status === 'logged' && p.date === this.loggedDay) this.logged = [...this.logged, p];
+  }
+
+  private drop(id: string) {
+    this.pending = this.pending.filter((x) => x.id !== id);
+    this.logged = this.logged.filter((x) => x.id !== id);
+  }
+
+  /** Loads the photos of a day's meals. */
+  async showLogged(day: string) {
+    this.loggedDay = day;
+    try {
+      const list = await pb.collection('meal_photos').getFullList<MealPhoto>({
+        filter: pb.filter('user = {:user} && date = {:day} && status = "logged"', {
+          user: session.user!.id,
+          day,
+        }),
+        sort: 'created',
+        requestKey: null,
+      });
+      if (day === this.loggedDay) this.logged = list;
+    } catch {
+      // the diary still works without them
+      if (day === this.loggedDay) this.logged = [];
+    }
   }
 
   async load() {
@@ -80,7 +110,7 @@ class Photos {
 
   async remove(p: MealPhoto) {
     await pb.collection('meal_photos').delete(p.id);
-    this.pending = this.pending.filter((x) => x.id !== p.id);
+    this.drop(p.id);
   }
 
   /** Logs the checked draft as diary entries. */
@@ -120,7 +150,7 @@ class Photos {
 
   async subscribe() {
     return pb.collection('meal_photos').subscribe<MealPhoto>('*', ({ action, record }) => {
-      if (action === 'delete') this.pending = this.pending.filter((x) => x.id !== record.id);
+      if (action === 'delete') this.drop(record.id);
       else this.put(record);
     });
   }

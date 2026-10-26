@@ -3,6 +3,7 @@ import {
   blankAnswers,
   cmToFtIn,
   eatingEnd,
+  fastingDaysLabel,
   formatWeight,
   ftInToCm,
   kgToLb,
@@ -39,5 +40,12 @@ describe('planRequest', () => {
   it('keeps the current weight and no pace when maintaining', () => {
     const a = { ...blankAnswers(), goal: 'maintain' as const, weight_kg: 70, goal_weight_kg: 60 };
     expect(planRequest(a)).toMatchObject({ goal_weight_kg: 70, pace_kg: 0 });
+  });
+});
+
+describe('fastingDaysLabel', () => {
+  it('names the days in week order', () => {
+    expect(fastingDaysLabel([])).toBe('every day');
+    expect(fastingDaysLabel(['thu', 'mon', 'tue'])).toBe('Mon, Tue, Thu');
   });
 });

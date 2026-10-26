@@ -1,6 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { addDays, dayLabel, isoDay, meals, type Entry, type Meal } from '../lib/diary';
+  import {
+    addDays,
+    dayLabel,
+    entryAmount,
+    isoDay,
+    meals,
+    type Entry,
+    type Meal,
+  } from '../lib/diary';
   import { diary } from '../lib/diary.svelte';
   import { kindLabel, type Exercise } from '../lib/extras';
   import { extras } from '../lib/extras.svelte';
@@ -12,6 +20,7 @@
   import AddFood from './AddFood.svelte';
   import EditEntry from './EditEntry.svelte';
   import FastingCard from './FastingCard.svelte';
+  import MealPhotos from './MealPhotos.svelte';
   import PhotoReview from './PhotoReview.svelte';
   import PhotoStrip from './PhotoStrip.svelte';
   import Ring from './Ring.svelte';
@@ -46,6 +55,7 @@
 
   $effect(() => {
     extras.show(diary.day).catch(() => (diary.error = "Couldn't load your water and exercise."));
+    photos.showLogged(diary.day);
   });
 
   // exercise adds to the day's budget
@@ -187,7 +197,7 @@
 </section>
 
 {#if diary.day === today && plan.fasting !== 'none'}
-  <FastingCard start={plan.eating_start} fasting={plan.fasting} />
+  <FastingCard start={plan.eating_start} fasting={plan.fasting} days={plan.fasting_days} />
 {/if}
 
 <PhotoStrip day={diary.day} onopen={(p) => (reviewing = p)} />
@@ -211,8 +221,8 @@
             >
               <span class="min-w-0">
                 <span class="block truncate">{e.name}</span>
-                {#if e.grams}<span class="text-sm text-zinc-500 dark:text-zinc-400"
-                    >{e.grams} g</span
+                {#if entryAmount(e)}<span class="text-sm text-zinc-500 dark:text-zinc-400"
+                    >{entryAmount(e)}</span
                   >{/if}
               </span>
               <span class="shrink-0 text-sm tabular-nums">{Math.round(e.kcal)}</span>
@@ -221,6 +231,11 @@
         {/each}
       </ul>
     {/if}
+    <MealPhotos
+      list={photos.logged.filter((p) => p.meal === m.id)}
+      title={m.label}
+      onerror={(msg) => (diary.error = msg)}
+    />
     <button
       class="w-full rounded-b-2xl px-5 py-3 text-left text-sm font-semibold text-brand-600 hover:bg-zinc-50 dark:text-brand-400 dark:hover:bg-zinc-800/50"
       onclick={() => (adding = m.id)}>+ Add food</button
@@ -246,7 +261,7 @@
             <span class="min-w-0">
               <span class="block truncate">{kindLabel(x.kind)}</span>
               <span class="block truncate text-sm text-zinc-500 dark:text-zinc-400"
-                >{x.minutes} min{x.name ? ` · ${x.name}` : ''}</span
+                >{[x.minutes ? `${x.minutes} min` : '', x.name].filter(Boolean).join(' · ')}</span
               >
             </span>
             <span class="shrink-0 text-sm tabular-nums">{x.kcal}</span>
