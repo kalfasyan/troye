@@ -1,3 +1,5 @@
+import { pb } from './pb';
+
 // Importing a Lose It! export (POST /api/app/import/loseit, backend/app/loseit.go).
 
 export interface Counted {
@@ -67,4 +69,58 @@ export function summary(r: ImportResult): string[] {
 function list(items: string[]): string {
   if (items.length <= 1) return items.join('');
   return `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
+}
+
+/** The size of each part an export is sent in. */
+export const PART_SIZE = 4 << 20;
+
+/** Thrown when the browser can't read the chosen file, as with a file still in the cloud. */
+export class UnreadableFile extends Error {}
+
+/**
+ * Sends an export in parts, then imports it. Small requests get through any
+ * proxy and show progress; a part that fails is sent once more.
+ */
+export async function importExport(
+  file: Blob,
+  plan: boolean,
+  onprogress: (sent: number) => void = () => {},
+): Promise<ImportResult> {
+  for (let offset = 0; offset < file.size;) {
+    let bytes: ArrayBuffer;
+    try {
+      bytes = await file.slice(offset, offset + PART_SIZE).arrayBuffer();
+    } catch {
+      throw new UnreadableFile();
+    }
+    const send = () => {
+      const body = new FormData();
+      body.append('offset', String(offset));
+      body.append('part', new Blob([bytes]), 'part');
+      return pb.send<{ size: number }>('/api/app/import/loseit/parts', {
+        method: 'POST',
+        body,
+        requestKey: null,
+      });
+    };
+    // a part the server already has (its answer was lost) comes back as 409 with the size
+    const settle = (err: { status?: number; response?: { size?: number } }) => {
+      if (err?.status === 409 && typeof err.response?.size === 'number')
+        return err.response as { size: number };
+      throw err;
+    };
+    offset = (
+      await send()
+        .catch(settle)
+        .catch(() => send().catch(settle))
+    ).size;
+    onprogress(offset / file.size);
+  }
+  const body = new FormData();
+  if (plan) body.append('plan', 'true');
+  return pb.send<ImportResult>('/api/app/import/loseit', {
+    method: 'POST',
+    body,
+    requestKey: null,
+  });
 }
