@@ -76,7 +76,7 @@
             NEVO is free to use, but it can't come with the app. {#if session.isOwner}Download it
               once from the <a
                 class="text-brand-600 underline dark:text-brand-400"
-                href={info.link}
+                href={info.download ?? info.link}
                 target="_blank"
                 rel="noreferrer">RIVM website</a
               > after accepting their terms, then choose the CSV or Excel file here.{:else}Ask the

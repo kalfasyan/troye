@@ -16,7 +16,7 @@ export interface FoodTable extends RecordModel {
 
 export const tableInfo: Record<
   TableName,
-  { title: string; about: string; credit: string; link: string }
+  { title: string; about: string; credit: string; link: string; download?: string }
 > = {
   ciqual: {
     title: 'Ciqual',
@@ -29,6 +29,8 @@ export const tableInfo: Record<
     about: 'About 2,300 Dutch and Flemish foods from RIVM, in Dutch and English.',
     credit: 'NEVO-online version 2025/9.0, RIVM, Bilthoven.',
     link: 'https://www.rivm.nl/en/dutch-food-composition-database',
+    download:
+      'https://www.rivm.nl/en/dutch-food-composition-database/use-of-nevo-online/request-dataset',
   },
   off: {
     title: 'Open Food Facts',

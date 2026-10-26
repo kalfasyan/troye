@@ -1,6 +1,8 @@
 package foods
 
 import (
+	"archive/zip"
+	"bytes"
 	"os"
 	"strings"
 	"testing"
@@ -65,11 +67,32 @@ func TestReadNEVO(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// the real download quotes the headers and adds units to the codes
+	withUnits := strings.NewReplacer("ENERCJ|", `"ENERCJ (kJ)"|`, "ENERCC|", `"ENERCC (kcal)"|`, "PROT|", `"PROT (g)"|`,
+		"FAT|", `"FAT (g)"|`, "|NA\n", `|"NA (mg)"`+"\n").Replace(csv)
+	// and its zip has more tables than the foods, some before it
+	var download bytes.Buffer
+	zw := zip.NewWriter(&download)
+	for _, f := range []struct{ name, data string }{
+		{"NEVO2025_v9.0_Details.csv", "NEVO-code|Voedingsmiddelnaam/Dutch food name|ENERCC (kcal)\n1|Iets|1\n"},
+		{"NEVO2025_v9.0.csv", withUnits},
+	} {
+		w, err := zw.Create(f.name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		w.Write([]byte(f.data))
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
 	for _, file := range []struct {
 		name string
 		data []byte
 	}{
 		{"NEVO2025_v9.0.csv", []byte(csv)},
+		{"NEVO2025_v9.0.csv", []byte(withUnits)},
+		{"NEVO2025_v9.0.zip", download.Bytes()},
 		{"NEVO2025_v9.0.csv", []byte(strings.ReplaceAll(strings.ReplaceAll(csv, ",", "."), "|", ";"))},
 		{"NEVO2025_v9.0.xlsx", xlsx},
 	} {
