@@ -139,3 +139,65 @@ func TestDiaryRules(t *testing.T) {
 		s.Test(t)
 	}
 }
+
+func TestAddOns(t *testing.T) {
+	a := newApp(t)
+	defer a.Cleanup()
+	ada, _ := addUser(t, a, "ada@example.com", "owner")
+	bob, _ := addUser(t, a, "bob@example.com", "member")
+	coffee := addFood(t, a, "Coffee", "", 2, 0.1)
+	milk := addFood(t, a, "Milk, semi-skimmed", "", 46, 3.4)
+	entries, _ := a.FindCollectionByNameOrId("entries")
+	save := func(values map[string]any) (*core.Record, error) {
+		r := core.NewRecord(entries)
+		r.Load(values)
+		return r, a.Save(r)
+	}
+
+	cup, err := save(map[string]any{"user": ada.Id, "date": "2026-10-24", "meal": "breakfast", "food": coffee.Id, "grams": 200})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// an add-on gets its own totals and its parent's day and meal
+	splash, err := save(map[string]any{"user": ada.Id, "date": "2026-01-01", "meal": "snacks", "food": milk.Id, "grams": 50, "parent": cup.Id})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if splash.GetFloat("kcal") != 23 || splash.GetString("date") != "2026-10-24" || splash.GetString("meal") != "breakfast" {
+		t.Errorf("add-on = %v", splash.FieldsData())
+	}
+
+	// moving the coffee moves the milk
+	cup.Set("meal", "snacks")
+	cup.Set("date", "2026-10-25")
+	if err := a.Save(cup); err != nil {
+		t.Fatal(err)
+	}
+	moved, _ := a.FindRecordById("entries", splash.Id)
+	if moved.GetString("meal") != "snacks" || moved.GetString("date") != "2026-10-25" {
+		t.Errorf("add-on after moving its parent = %v", moved.FieldsData())
+	}
+
+	// no add-ons on add-ons, on someone else's entry, or on an entry that has add-ons
+	if _, err := save(map[string]any{"user": ada.Id, "date": "2026-10-25", "meal": "snacks", "food": milk.Id, "grams": 10, "parent": splash.Id}); err == nil {
+		t.Error("added an add-on to an add-on")
+	}
+	if _, err := save(map[string]any{"user": bob.Id, "date": "2026-10-25", "meal": "snacks", "food": milk.Id, "grams": 10, "parent": cup.Id}); err == nil {
+		t.Error("added an add-on to someone else's entry")
+	}
+	other, _ := save(map[string]any{"user": ada.Id, "date": "2026-10-25", "meal": "snacks", "name": "Biscuit", "kcal": 40})
+	cup.Set("parent", other.Id)
+	if err := a.Save(cup); err == nil {
+		t.Error("made an entry with add-ons an add-on")
+	}
+
+	// removing the coffee removes the milk
+	cup, _ = a.FindRecordById("entries", cup.Id)
+	if err := a.Delete(cup); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.FindRecordById("entries", splash.Id); err == nil {
+		t.Error("the add-on outlived its parent")
+	}
+}

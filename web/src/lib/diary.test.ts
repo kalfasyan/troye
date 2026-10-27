@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   addDays,
+  addOnIdeas,
+  calorieSources,
+  scaleEntry,
+  servingsOf,
+  stepServings,
   amountOf,
   dayLabel,
   entryAmount,
@@ -92,5 +97,64 @@ describe('imported entries', () => {
       '0.65 g salt',
       '40 mg cholesterol',
     ]);
+  });
+});
+
+describe('servings', () => {
+  it('counts servings of a food', () => {
+    expect(servingsOf({ serving_g: 30 }, 60)).toBe(2);
+    expect(servingsOf({ serving_g: 30 }, 45)).toBe(1.5);
+    expect(servingsOf({ serving_g: 0 }, 45)).toBe(0);
+  });
+
+  it('steps by halves up to 2, then by whole servings', () => {
+    expect(stepServings(1, true)).toBe(1.5);
+    expect(stepServings(1.5, true)).toBe(2);
+    expect(stepServings(2, true)).toBe(3);
+    expect(stepServings(3, false)).toBe(2);
+    expect(stepServings(2, false)).toBe(1.5);
+    expect(stepServings(0.5, false)).toBe(0.5);
+    // an odd amount snaps to the next step
+    expect(stepServings(1.3, true)).toBe(1.5);
+    expect(stepServings(1.3, false)).toBe(1);
+  });
+
+  it('scales an entry without a food, and the number in its amount', () => {
+    const e = { kcal: 120, protein: 3, carbs: 20.5, fat: 2, amount: '2 Tablespoons' };
+    expect(scaleEntry(e, 1.5)).toEqual({
+      kcal: 180,
+      protein: 4.5,
+      carbs: 30.8,
+      fat: 3,
+      amount: '3 Tablespoons',
+    });
+    expect(scaleEntry({ ...e, amount: 'a bowl' }, 2).amount).toBe('a bowl');
+    expect(scaleEntry({ ...e, amount: '0,5 cup' }, 3).amount).toBe('1.5 cup');
+  });
+});
+
+describe('add-ons', () => {
+  it('suggests what goes with a food', () => {
+    expect(addOnIdeas('Coffee, black')).toContain('milk');
+    expect(addOnIdeas('Ramen noodle soup')).toContain('egg');
+    expect(addOnIdeas('Apple')).toEqual([]);
+  });
+});
+
+describe('calorie sources', () => {
+  it('splits the calories by macro', () => {
+    const s = calorieSources({ kcal: 400, carbs: 50, protein: 25, fat: 0 });
+    expect(s).toEqual({ carbs: 200, protein: 100, fat: 0, other: 100 });
+  });
+
+  it('shares rounding between the macros', () => {
+    const s = calorieSources({ kcal: 100, carbs: 10, protein: 10, fat: 2.1 });
+    expect(s.other).toBe(0);
+    expect(s.carbs + s.protein + s.fat).toBeCloseTo(100);
+  });
+
+  it('leaves calories without macros as other', () => {
+    expect(calorieSources({ kcal: 300, carbs: 0, protein: 0, fat: 0 }).other).toBe(300);
+    expect(calorieSources({ kcal: 0, carbs: 0, protein: 0, fat: 0 }).other).toBe(0);
   });
 });

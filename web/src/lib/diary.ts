@@ -48,6 +48,8 @@ export interface Entry extends RecordModel {
   salt?: number;
   /** milligrams */
   cholesterol?: number;
+  /** the entry this one was added to, like the coffee for its milk */
+  parent?: string;
   expand?: { food?: Food };
 }
 
@@ -68,6 +70,98 @@ export function moreNutrients(
     ['cholesterol', e.cholesterol, 'mg'],
   ];
   return list.filter(([, v]) => v).map(([label, v, unit]) => `${v} ${unit} ${label}`);
+}
+
+/** How many servings an amount of a food is, to one decimal, or 0 for a food without servings. */
+export function servingsOf(food: Pick<Food, 'serving_g'>, grams: number): number {
+  return food.serving_g > 0 ? Math.round((grams / food.serving_g) * 10) / 10 : 0;
+}
+
+/** One step up or down from a number of servings: halves below 2, whole ones above. */
+export function stepServings(n: number, up: boolean): number {
+  const step = (up ? n < 2 : n <= 2) ? 0.5 : 1;
+  const next = up ? Math.floor(n / step) * step + step : Math.ceil(n / step) * step - step;
+  return Math.max(0.5, Math.round(next * 10) / 10);
+}
+
+/**
+ * An entry without a food (a quick add or an import) times a factor: its values,
+ * and its amount when it starts with a number ("2 Tablespoons" becomes "3 Tablespoons").
+ */
+export function scaleEntry(
+  e: Pick<Entry, 'kcal' | 'protein' | 'carbs' | 'fat' | 'amount'>,
+  factor: number,
+): Pick<Entry, 'kcal' | 'protein' | 'carbs' | 'fat' | 'amount'> {
+  const r = (n: number) => Math.round((n || 0) * factor * 10) / 10;
+  const amount = (e.amount ?? '').replace(/^(\d+(?:[.,]\d+)?)/, (n) => {
+    const v = Math.round(parseFloat(n.replace(',', '.')) * factor * 100) / 100;
+    return String(v);
+  });
+  return {
+    kcal: Math.round((e.kcal || 0) * factor),
+    protein: r(e.protein),
+    carbs: r(e.carbs),
+    fat: r(e.fat),
+    amount,
+  };
+}
+
+/** Things people often add to a food, to search for: milk for a coffee, an egg for a soup. */
+export function addOnIdeas(name: string): string[] {
+  const n = name.toLowerCase();
+  const ideas: [RegExp, string[]][] = [
+    [/coffee|espresso|cappuccino|latte|koffie|café|cafe/, ['milk', 'oat milk', 'sugar', 'cream']],
+    [/\btea\b|thee|thé/, ['milk', 'sugar', 'honey', 'lemon']],
+    [
+      /noodle|ramen|pho|soup|soep|soupe|udon|nouille/,
+      ['egg', 'tofu', 'chicken', 'spring onion', 'chili oil', 'bean sprouts'],
+    ],
+    [/salad|salade|sla\b/, ['dressing', 'olive oil', 'cheese', 'croutons', 'avocado']],
+    [
+      /yogh?urt|skyr|kwark|quark|porridge|oat|muesli|granola|cereal/,
+      ['honey', 'banana', 'berries', 'nuts', 'milk'],
+    ],
+    [/pasta|spaghetti|penne|rice|rijst|riz/, ['parmesan', 'olive oil', 'sauce', 'chicken']],
+    [
+      /bread|brood|pain|toast|sandwich|bagel|cracker/,
+      ['butter', 'cheese', 'ham', 'jam', 'peanut butter'],
+    ],
+    [
+      /pancake|pannenkoek|crêpe|crepe|waffle|wafel|gaufre/,
+      ['syrup', 'sugar', 'nutella', 'whipped cream'],
+    ],
+    [/potato|aardappel|frites|fries|patat/, ['mayonnaise', 'ketchup', 'butter']],
+    [/pizza|burger|wrap|taco/, ['cheese', 'sauce', 'fries']],
+  ];
+  return ideas.find(([re]) => re.test(n))?.[1] ?? [];
+}
+
+/** The colors of the macros, the same on the ring and the bars under it. */
+export const macroColors = {
+  carbs: { stroke: 'stroke-orange-500', bg: 'bg-orange-500' },
+  protein: { stroke: 'stroke-teal-500', bg: 'bg-teal-500' },
+  fat: { stroke: 'stroke-amber-400', bg: 'bg-amber-400' },
+  other: { stroke: 'stroke-zinc-400', bg: 'bg-zinc-400' },
+} as const;
+
+/** The day's calories split by where they came from, for the ring: carbs, protein, fat, and the rest. */
+export function calorieSources(t: Totals): {
+  carbs: number;
+  protein: number;
+  fat: number;
+  other: number;
+} {
+  const carbs = t.carbs * 4;
+  const protein = t.protein * 4;
+  const fat = t.fat * 9;
+  const fromMacros = carbs + protein + fat;
+  const kcal = Math.max(t.kcal, 0);
+  if (!kcal) return { carbs: 0, protein: 0, fat: 0, other: 0 };
+  // quick adds without macros (or alcohol) leave calories the macros don't explain;
+  // a few percent either way is rounding, so the macros share all of it
+  const other = kcal - fromMacros > kcal * 0.05 ? kcal - fromMacros : 0;
+  const scale = fromMacros ? (kcal - other) / fromMacros : 0;
+  return { carbs: carbs * scale, protein: protein * scale, fat: fat * scale, other };
 }
 
 export interface Totals {

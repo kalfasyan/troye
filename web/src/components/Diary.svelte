@@ -5,6 +5,7 @@
     dayLabel,
     entryAmount,
     isoDay,
+    macroColors,
     meals,
     type Entry,
     type Meal,
@@ -34,7 +35,7 @@
 
   const plan = $derived(profile.current!);
   const today = isoDay(new Date());
-  let adding = $state<Meal | null>(null);
+  let adding = $state<{ meal: Meal; addTo?: Entry; query?: string } | null>(null);
   let editing = $state<Entry | null>(null);
   let reviewing = $state<MealPhoto | null>(null);
   let exercising = $state<Exercise | 'new' | null>(null);
@@ -86,10 +87,10 @@
   }
 
   const macros = $derived([
-    { label: 'Carbs', eaten: diary.totals.carbs, target: plan.carbs_g },
-    { label: 'Protein', eaten: diary.totals.protein, target: plan.protein_g },
-    { label: 'Fat', eaten: diary.totals.fat, target: plan.fat_g },
-  ]);
+    { key: 'carbs', label: 'Carbs', eaten: diary.totals.carbs, target: plan.carbs_g },
+    { key: 'protein', label: 'Protein', eaten: diary.totals.protein, target: plan.protein_g },
+    { key: 'fat', label: 'Fat', eaten: diary.totals.fat, target: plan.fat_g },
+  ] as const);
 
   async function removed(entry: Entry) {
     editing = null;
@@ -159,7 +160,7 @@
 {/if}
 
 <section class="card">
-  <Ring eaten={diary.totals.kcal} {budget} />
+  <Ring totals={diary.totals} {budget} />
   <div class="mt-2 flex justify-center gap-6 text-sm text-zinc-500 dark:text-zinc-400">
     <span
       ><b class="text-zinc-900 tabular-nums dark:text-zinc-100"
@@ -180,7 +181,10 @@
   <div class="mt-5 grid grid-cols-3 gap-3 text-sm">
     {#each macros as m (m.label)}
       <div>
-        <span class="block font-medium">{m.label}</span>
+        <span class="flex items-center gap-1.5 font-medium"
+          ><span class="size-2.5 rounded-full {macroColors[m.key].bg}" aria-hidden="true"
+          ></span>{m.label}</span
+        >
         <span class="block text-xs text-zinc-500 tabular-nums dark:text-zinc-400"
           >{Math.round(m.eaten)} / {m.target} g</span
         >
@@ -188,7 +192,7 @@
           <div
             class="h-full rounded-full transition-all {m.eaten > m.target
               ? 'bg-rose-500'
-              : 'bg-orange-500'}"
+              : macroColors[m.key].bg}"
             style="width: {m.target ? Math.min((m.eaten / m.target) * 100, 100) : 0}%"
           ></div>
         </div>
@@ -209,15 +213,16 @@
     <header class="flex items-center justify-between px-5 pt-4 pb-2">
       <h2 class="font-semibold">{m.label}</h2>
       <span class="text-sm text-zinc-500 tabular-nums dark:text-zinc-400">
-        {Math.round(items.reduce((s, e) => s + e.kcal, 0))} kcal
+        {Math.round(diary.entries.reduce((s, e) => s + (e.meal === m.id ? e.kcal : 0), 0))} kcal
       </span>
     </header>
     {#if items.length}
       <ul class="divide-y divide-zinc-100 dark:divide-zinc-800">
         {#each items as e (e.id)}
+          {@const addOns = diary.addOnsOf(e)}
           <li>
             <button
-              class="flex w-full items-center justify-between gap-3 px-5 py-2.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+              class="flex w-full items-center justify-between gap-3 px-5 py-2.5 text-left transition-colors hover:bg-zinc-50 active:bg-zinc-100 dark:hover:bg-zinc-800/50 dark:active:bg-zinc-800"
               onclick={() => (editing = e)}
             >
               <span class="min-w-0">
@@ -228,6 +233,23 @@
               </span>
               <span class="shrink-0 text-sm tabular-nums">{Math.round(e.kcal)}</span>
             </button>
+            {#if addOns.length}
+              <ul class="-mt-1 pb-1.5">
+                {#each addOns as a (a.id)}
+                  <li>
+                    <button
+                      class="flex w-full items-center justify-between gap-3 py-1 pr-5 pl-8 text-left text-sm text-zinc-600 transition-colors hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800/50"
+                      onclick={() => (editing = a)}
+                    >
+                      <span class="min-w-0 truncate">
+                        {`+ ${[a.name, entryAmount(a)].filter(Boolean).join(' · ')}`}
+                      </span>
+                      <span class="shrink-0 tabular-nums">{Math.round(a.kcal)}</span>
+                    </button>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
           </li>
         {/each}
       </ul>
@@ -239,7 +261,7 @@
     <MealPhotos list={photos.logged.filter((p) => p.meal === m.id)} title={m.label} />
     <button
       class="w-full rounded-b-2xl px-5 py-3 text-left text-sm font-semibold text-brand-600 hover:bg-zinc-50 dark:text-brand-400 dark:hover:bg-zinc-800/50"
-      onclick={() => (adding = m.id)}>+ Add food</button
+      onclick={() => (adding = { meal: m.id })}>+ Add food</button
     >
   </section>
 {/each}
@@ -295,7 +317,9 @@
 
 {#if adding}
   <AddFood
-    meal={adding}
+    meal={adding.meal}
+    addTo={adding.addTo}
+    query={adding.query}
     onclose={() => (adding = null)}
     onreview={(p) => ((adding = null), (reviewing = p))}
   />
@@ -314,5 +338,13 @@
   <WeekSheet units={plan.units} onclose={() => (showWeek = false)} />
 {/if}
 {#if editing}
-  <EditEntry entry={editing} onclose={() => (editing = null)} onremove={removed} />
+  {#key editing.id}
+    <EditEntry
+      entry={editing}
+      onclose={() => (editing = null)}
+      onremove={removed}
+      onedit={(e) => (editing = e)}
+      onaddon={(e, query) => ((editing = null), (adding = { meal: e.meal, addTo: e, query }))}
+    />
+  {/key}
 {/if}

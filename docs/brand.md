@@ -70,4 +70,14 @@ The palette is Tailwind's orange family plus a teal accent, so every value is a 
 white text, which is mapped to `orange-700` so the text keeps WCAG AA contrast; bright
 `orange-500` is for shapes, rings and icons, not for text on white.
 
-Over the daily budget, use `rose-500` for the ring instead of orange, never red text alone.
+In the app, the day's calorie ring fills in the colors of where the calories came from, and
+the macro bars under it use the same colors, so they double as its legend:
+
+| Macro | Tailwind |
+| --- | --- |
+| Carbs | `orange-500` |
+| Protein | `teal-500` |
+| Fat | `amber-400` |
+| Calories without macros (quick adds) | `zinc-400` |
+
+Over the daily budget, a `rose-500` arc laps the ring from 12 o'clock, never red text alone.

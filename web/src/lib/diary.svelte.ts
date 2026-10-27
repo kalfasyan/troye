@@ -23,8 +23,15 @@ class Diary {
     );
   }
 
+  /** A meal's entries, without the add-ons, which go with the entry they belong to. */
   byMeal(meal: Meal) {
-    return this.entries.filter((e) => e.meal === meal);
+    const ids = new Set(this.entries.map((e) => e.id));
+    return this.entries.filter((e) => e.meal === meal && !(e.parent && ids.has(e.parent)));
+  }
+
+  /** What was added to an entry, like the milk in a coffee. */
+  addOnsOf(entry: Entry) {
+    return this.entries.filter((e) => e.parent === entry.id);
   }
 
   async show(day: string) {
@@ -65,42 +72,87 @@ class Diary {
     }
   }
 
-  async add(meal: Meal, food: Food, grams: number) {
+  /** Logs a food, to a meal or as an add-on to another entry (the server puts it on that entry's meal). */
+  async add(meal: Meal, food: Food, grams: number, parent?: Entry) {
     const e = await pb
       .collection('entries')
       .create<Entry>(
-        { user: session.user!.id, date: this.day, meal, food: food.id, grams },
+        { user: session.user!.id, date: this.day, meal, food: food.id, grams, parent: parent?.id },
         { expand: 'food' },
       );
     this.put(e);
     this.recent = [food, ...this.recent.filter((f) => f.id !== food.id)];
+    return e;
   }
 
-  async quickAdd(meal: Meal, name: string, kcal: number) {
+  async quickAdd(meal: Meal, name: string, kcal: number, parent?: Entry) {
     const e = await pb.collection('entries').create<Entry>({
       user: session.user!.id,
       date: this.day,
       meal,
       name,
       kcal,
+      parent: parent?.id,
     });
     this.put(e);
+    return e;
   }
 
-  async update(entry: Entry, changes: Partial<Pick<Entry, 'grams' | 'meal' | 'kcal' | 'name'>>) {
+  async update(
+    entry: Entry,
+    changes: Partial<
+      Pick<Entry, 'grams' | 'meal' | 'kcal' | 'name' | 'protein' | 'carbs' | 'fat' | 'amount'>
+    >,
+  ) {
     const e = await pb.collection('entries').update<Entry>(entry.id, changes, { expand: 'food' });
     this.put(e);
+    // the server moves the add-ons with it; live updates bring them too, but not always first
+    for (const a of this.addOnsOf(e)) {
+      if (a.meal !== e.meal || a.date !== e.date) this.put({ ...a, meal: e.meal, date: e.date });
+    }
+    if (e.date !== this.day)
+      this.entries = this.entries.filter((x) => x.id !== e.id && x.parent !== e.id);
   }
 
-  /** Removes an entry and returns a function that puts it back. */
+  /** Removes an entry, and its add-ons with it, and returns a function that puts them back. */
   async remove(entry: Entry): Promise<() => Promise<void>> {
+    const addOns = this.addOnsOf(entry);
     await pb.collection('entries').delete(entry.id);
-    this.entries = this.entries.filter((e) => e.id !== entry.id);
-    return async () => {
-      const { id, created, updated, collectionId, collectionName, expand, ...values } = entry;
-      const back = await pb.collection('entries').create<Entry>(values, { expand: 'food' });
-      this.put(back);
+    this.entries = this.entries.filter((e) => e.id !== entry.id && e.parent !== entry.id);
+    const values = (e: Entry) => {
+      const { id, created, updated, collectionId, collectionName, expand, ...rest } = e;
+      return rest;
     };
+    return async () => {
+      const back = await pb.collection('entries').create<Entry>(values(entry), { expand: 'food' });
+      this.put(back);
+      for (const a of addOns) {
+        const again = await pb
+          .collection('entries')
+          .create<Entry>({ ...values(a), parent: back.id }, { expand: 'food' });
+        this.put(again);
+      }
+    };
+  }
+
+  /** What this person has added to a food before, most used first, to offer again. */
+  async usualAddOns(food: string): Promise<Food[]> {
+    try {
+      const list = await pb.collection('entries').getList<Entry>(1, 100, {
+        filter: pb.filter('user = {:user} && parent.food = {:food} && food != ""', {
+          user: session.user!.id,
+          food,
+        }),
+        sort: '-created',
+        expand: 'food',
+        requestKey: null,
+      });
+      const count = new Map<string, number>();
+      for (const e of list.items) count.set(e.food, (count.get(e.food) ?? 0) + 1);
+      return recentFoods(list.items).sort((a, b) => count.get(b.id)! - count.get(a.id)!);
+    } catch {
+      return [];
+    }
   }
 
   /** Live updates from the other device and the photo analyser. */
