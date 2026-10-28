@@ -5,15 +5,15 @@
     entryAmount,
     meals,
     moreNutrients,
-    portions,
     scaleEntry,
-    servingsOf,
     stepServings,
     type Entry,
     type Meal,
   } from '../lib/diary';
   import { diary } from '../lib/diary.svelte';
   import { errorMessage } from '../lib/pb';
+  import { guessAmount } from '../lib/portions';
+  import AmountPicker from './AmountPicker.svelte';
   import Sheet from './Sheet.svelte';
   import Stepper from './Stepper.svelte';
 
@@ -41,6 +41,8 @@
   let meal = $state<Meal>(entry.meal);
   // svelte-ignore state_referenced_locally
   let grams = $state<number | undefined>(entry.grams || undefined);
+  // svelte-ignore state_referenced_locally
+  let amount = $state(entry.amount || (food ? guessAmount(food, entry.grams) : ''));
   // an entry without a food is scaled as a whole: 2 × "1 bowl" doubles everything
   let times = $state(1);
   // svelte-ignore state_referenced_locally
@@ -55,7 +57,6 @@
   );
   const preview = $derived(food && grams ? amountOf(food, grams) : null);
   const scaled = $derived(scaleEntry(entry, times));
-  const servings = $derived(food && grams ? servingsOf(food, grams) : 0);
   // what usually goes with it, less what is already in it
   const ideas = $derived(
     addOnIdeas(entry.name)
@@ -64,12 +65,8 @@
   );
 
   function step(up: boolean) {
-    if (food) {
-      grams = Math.round(stepServings(servings || 1, up) * food.serving_g * 10) / 10;
-    } else {
-      times = stepServings(times, up);
-      kcal = scaled.kcal;
-    }
+    times = stepServings(times, up);
+    kcal = scaled.kcal;
   }
 
   async function save(e: SubmitEvent) {
@@ -81,7 +78,7 @@
       await diary.update(
         entry,
         food
-          ? { ...where, grams }
+          ? { ...where, grams, amount }
           : times !== 1
             ? { ...where, ...scaled, kcal }
             : { ...where, kcal },
@@ -121,31 +118,7 @@
     {/if}
 
     {#if food}
-      {#if food.serving_g > 0}
-        <div class="card py-3">
-          <Stepper
-            label="{servings || 1} × {food.serving_label || 'serving'}"
-            hint="{grams ?? 0} g"
-            canDown={servings > 0.5}
-            ondown={() => step(false)}
-            onup={() => step(true)}
-          />
-        </div>
-      {/if}
-      <label>
-        Amount (g)
-        <input type="number" inputmode="decimal" min="1" max="5000" required bind:value={grams} />
-      </label>
-      <div class="flex flex-wrap gap-2">
-        {#each portions(food) as p (p.label)}
-          <button
-            type="button"
-            class="chip"
-            class:chosen={grams === p.grams}
-            onclick={() => (grams = p.grams)}>{p.label}</button
-          >
-        {/each}
-      </div>
+      <AmountPicker {food} bind:grams bind:amount />
       {#if preview}
         <p class="text-sm text-zinc-600 dark:text-zinc-400">
           {preview.kcal} kcal · {preview.carbs} g carbs · {preview.protein} g protein · {preview.fat}

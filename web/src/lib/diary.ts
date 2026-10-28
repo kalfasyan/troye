@@ -72,11 +72,6 @@ export function moreNutrients(
   return list.filter(([, v]) => v).map(([label, v, unit]) => `${v} ${unit} ${label}`);
 }
 
-/** How many servings an amount of a food is, to one decimal, or 0 for a food without servings. */
-export function servingsOf(food: Pick<Food, 'serving_g'>, grams: number): number {
-  return food.serving_g > 0 ? Math.round((grams / food.serving_g) * 10) / 10 : 0;
-}
-
 /** One step up or down from a number of servings: halves below 2, whole ones above. */
 export function stepServings(n: number, up: boolean): number {
   const step = (up ? n < 2 : n <= 2) ? 0.5 : 1;
@@ -208,21 +203,6 @@ export function amountOf(food: Pick<Food, keyof Totals>, grams: number): Totals 
     carbs: r(food.carbs),
     fat: r(food.fat),
   };
-}
-
-/** Quick amounts to offer for a food: its serving, then round numbers of grams. */
-export function portions(
-  food: Pick<Food, 'serving_g' | 'serving_label'>,
-): { label: string; grams: number }[] {
-  const list = [50, 100, 150, 200].map((g) => ({ label: `${g} g`, grams: g }));
-  if (food.serving_g > 0) {
-    const label = food.serving_label || `1 serving`;
-    return [
-      { label: `${label}`, grams: food.serving_g },
-      ...list.filter((p) => p.grams !== food.serving_g),
-    ];
-  }
-  return list;
 }
 
 /** A day as YYYY-MM-DD in local time. */

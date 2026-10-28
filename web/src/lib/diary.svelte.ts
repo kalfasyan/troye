@@ -8,6 +8,8 @@ class Diary {
   day = $state(isoDay(new Date()));
   entries = $state<Entry[]>([]);
   recent = $state<Food[]>([]);
+  /** how much of each recent food was logged last time, to start from next time */
+  lastAmounts = new Map<string, { grams: number; amount: string }>();
   loading = $state(false);
   error = $state('');
 
@@ -67,21 +69,32 @@ class Diary {
         requestKey: null,
       });
       this.recent = recentFoods(list.items);
+      // newest first, so the first one seen is the last logged
+      for (const e of [...list.items].reverse()) {
+        this.lastAmounts.set(e.food, { grams: e.grams, amount: e.amount ?? '' });
+      }
     } catch {
       // recents are a convenience; search still works
     }
   }
 
   /** Logs a food, to a meal or as an add-on to another entry (the server puts it on that entry's meal). */
-  async add(meal: Meal, food: Food, grams: number, parent?: Entry) {
-    const e = await pb
-      .collection('entries')
-      .create<Entry>(
-        { user: session.user!.id, date: this.day, meal, food: food.id, grams, parent: parent?.id },
-        { expand: 'food' },
-      );
+  async add(meal: Meal, food: Food, grams: number, amount = '', parent?: Entry) {
+    const e = await pb.collection('entries').create<Entry>(
+      {
+        user: session.user!.id,
+        date: this.day,
+        meal,
+        food: food.id,
+        grams,
+        amount,
+        parent: parent?.id,
+      },
+      { expand: 'food' },
+    );
     this.put(e);
     this.recent = [food, ...this.recent.filter((f) => f.id !== food.id)];
+    this.lastAmounts.set(food.id, { grams, amount });
     return e;
   }
 

@@ -6,9 +6,6 @@
     entryAmount,
     foodName,
     meals,
-    portions,
-    servingsOf,
-    stepServings,
     type Entry,
     type Food,
     type Meal,
@@ -17,11 +14,12 @@
   import { errorMessage } from '../lib/pb';
   import { statusText, type MealPhoto } from '../lib/photos';
   import { photos } from '../lib/photos.svelte';
+  import { startAmount } from '../lib/portions';
   import { profile } from '../lib/profile.svelte';
   import AnalyserCard from './AnalyserCard.svelte';
   import BarcodeScanner from './BarcodeScanner.svelte';
   import Sheet from './Sheet.svelte';
-  import Stepper from './Stepper.svelte';
+  import AmountPicker from './AmountPicker.svelte';
 
   // Adding food to a meal: search (recent foods first), take a photo, scan a
   // barcode, make a custom food, or quick-add calories. Picking a food asks how
@@ -79,7 +77,8 @@
   let food = $state<Food | null>(null);
   let grams = $state<number | undefined>(100);
   const preview = $derived(food && grams ? amountOf(food, grams) : null);
-  const servings = $derived(food && grams ? servingsOf(food, grams) : 0);
+  // the amount as counted, such as "2 tbsp", or empty for grams
+  let amount = $state('');
   const name = (f: Food) => foodName(f, profile.current?.food_language);
 
   // the custom food and quick add forms
@@ -172,7 +171,7 @@
 
   function pick(f: Food) {
     food = f;
-    grams = f.serving_g || 100;
+    ({ grams, amount } = startAmount(f, diary.lastAmounts.get(f.id)));
     error = '';
     view = 'amount';
   }
@@ -182,7 +181,7 @@
     busy = true;
     error = '';
     try {
-      const e = await diary.add(meal, food, grams, parent ?? undefined);
+      const e = await diary.add(meal, food, grams, amount, parent ?? undefined);
       await added(e);
     } catch (err) {
       error = errorMessage(err, "Couldn't add it. Please try again.");
@@ -295,6 +294,7 @@
 </script>
 
 {#snippet foodRow(f: Food)}
+  {@const usual = startAmount(f, diary.lastAmounts.get(f.id))}
   <li>
     <button
       class="flex w-full items-center justify-between gap-3 px-1 py-3 text-left"
@@ -303,13 +303,11 @@
       <span class="min-w-0">
         <span class="block truncate font-medium">{name(f)}</span>
         <span class="block truncate text-sm text-zinc-500 dark:text-zinc-400">
-          {[f.brand, f.serving_g ? f.serving_label || `${f.serving_g} g` : '100 g']
-            .filter(Boolean)
-            .join(' · ')}
+          {[f.brand, usual.amount || `${usual.grams} g`].filter(Boolean).join(' · ')}
         </span>
       </span>
       <span class="shrink-0 text-sm text-zinc-500 tabular-nums dark:text-zinc-400">
-        {Math.round(f.serving_g ? (f.kcal * f.serving_g) / 100 : f.kcal)} kcal
+        {Math.round((f.kcal * usual.grams) / 100)} kcal
       </span>
     </button>
   </li>
@@ -455,29 +453,8 @@
       {#if food.brand}<p class="text-sm text-zinc-500 dark:text-zinc-400">{food.brand}</p>{/if}
       <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{food.kcal} kcal per 100 g</p>
     </div>
-    {#if food.serving_g > 0}
-      <div class="card mt-4 py-3">
-        <Stepper
-          label="{servings || 1} × {food.serving_label || 'serving'}"
-          hint="{grams ?? 0} g"
-          canDown={servings > 0.5}
-          ondown={() =>
-            (grams = Math.round(stepServings(servings || 1, false) * food!.serving_g * 10) / 10)}
-          onup={() =>
-            (grams = Math.round(stepServings(servings || 1, true) * food!.serving_g * 10) / 10)}
-        />
-      </div>
-    {/if}
-    <label class="mt-4">
-      Amount (g)
-      <input type="number" inputmode="decimal" min="1" max="5000" bind:value={grams} />
-    </label>
-    <div class="mt-2 flex flex-wrap gap-2">
-      {#each portions(food) as p (p.label)}
-        <button class="chip" class:chosen={grams === p.grams} onclick={() => (grams = p.grams)}
-          >{p.label}</button
-        >
-      {/each}
+    <div class="mt-4 flex flex-col gap-3">
+      <AmountPicker {food} bind:grams bind:amount />
     </div>
     {#if preview}
       <div class="card mt-4 grid grid-cols-4 gap-2 text-center text-sm">
