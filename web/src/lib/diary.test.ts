@@ -4,14 +4,12 @@ import {
   addOnIdeas,
   calorieSources,
   scaleEntry,
-  servingsOf,
   stepServings,
   amountOf,
   dayLabel,
   entryAmount,
   foodName,
   moreNutrients,
-  portions,
   recentFoods,
   sum,
   type Entry,
@@ -42,15 +40,6 @@ describe('amounts', () => {
       { kcal: 50, protein: 0.5, carbs: 0, fat: 1 },
     ]);
     expect(t).toEqual({ kcal: 150, protein: 1.5, carbs: 2, fat: 4 });
-  });
-
-  it('offers the serving first', () => {
-    expect(portions(food('a')).map((p) => p.grams)).toEqual([50, 100, 150, 200]);
-    const biscuit = portions(food('b', { serving_g: 6.25, serving_label: '1 biscuit' }));
-    expect(biscuit[0]).toEqual({ label: '1 biscuit', grams: 6.25 });
-    expect(portions(food('c', { serving_g: 100 })).map((p) => p.grams)).toEqual([
-      100, 50, 150, 200,
-    ]);
   });
 });
 
@@ -101,12 +90,6 @@ describe('imported entries', () => {
 });
 
 describe('servings', () => {
-  it('counts servings of a food', () => {
-    expect(servingsOf({ serving_g: 30 }, 60)).toBe(2);
-    expect(servingsOf({ serving_g: 30 }, 45)).toBe(1.5);
-    expect(servingsOf({ serving_g: 0 }, 45)).toBe(0);
-  });
-
   it('steps by halves up to 2, then by whole servings', () => {
     expect(stepServings(1, true)).toBe(1.5);
     expect(stepServings(1.5, true)).toBe(2);
