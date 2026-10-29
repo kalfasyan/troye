@@ -1,6 +1,7 @@
 package foods
 
 import (
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -70,7 +71,7 @@ func matches(app core.App, userID string, words []string) ([]*core.Record, error
 	query.OrderBy(
 		"(owner != '') DESC",
 		"(search LIKE {:first} ESCAPE '\\') DESC",
-		"(source IN ('ciqual', 'nevo', 'usda')) DESC",
+		"(source IN ('usda', 'nevo', 'ciqual')) DESC",
 		"length(name)",
 	).Bind(first).Limit(candidates)
 	var found []*core.Record
@@ -138,7 +139,13 @@ func score(r *core.Record, words []string, userID string, uses int) float64 {
 		weight float64
 	}{{"name", 1}, {"name_nl", 1}, {"name_fr", 1}, {"aliases", 0.9}} {
 		for _, text := range strings.Split(r.GetString(field.name), ";") {
-			if s := fieldScore(Normalize(text), words) * field.weight; s > best {
+			s := fieldScore(Normalize(text), words)
+			// the food itself, before the first comma, is what was asked for:
+			// "Rice, white, cooked" rather than "Rice flour, white" for "white rice"
+			if head, _, found := strings.Cut(text, ","); found && s > 0 && coversAll(Normalize(head), words) {
+				s += 2
+			}
+			if s *= field.weight; s > best {
 				best = s
 			}
 		}
@@ -152,12 +159,54 @@ func score(r *core.Record, words []string, userID string, uses int) float64 {
 	switch source := r.GetString("source"); {
 	case r.GetString("owner") == userID:
 		total += 3
-	case source == "ciqual" || source == "nevo" || source == "usda":
+	case source == "usda" || source == "nevo" || source == "ciqual":
 		total += 2
 	}
 	// "Apple, raw" before "Apple pie, homemade, with puff pastry"
-	total -= 0.15 * float64(len(strings.Fields(Normalize(r.GetString("name")))))
+	name := Normalize(r.GetString("name"))
+	total -= 0.15 * float64(len(strings.Fields(name)))
+	// plain foods before processed ones: fresh apples before dried or canned
+	// ones, unless that is what was asked for
+	if hasAnyWord(name, processedWords, words) {
+		total -= 0.8
+	}
+	// meat, fish, grains and pulses are logged cooked: cooked rice before raw
+	if cookedGroups[r.GetString("food_group")] && hasAnyWord(name, rawWords, words) {
+		total -= 0.8
+	}
 	return total
+}
+
+var (
+	processedWords = []string{"dried", "dehydrated", "powder", "frozen", "canned", "condensed", "imitation",
+		"unprepared", "prepackaged", "deli", "concentrate", "dry"}
+	rawWords     = []string{"raw", "uncooked", "dry"}
+	cookedGroups = map[string]bool{
+		"Poultry Products": true, "Beef Products": true, "Pork Products": true, "Lamb, Veal, and Game Products": true,
+		"Finfish and Shellfish Products": true, "Sausages and Luncheon Meats": true,
+		"Cereal Grains and Pasta": true, "Legumes and Legume Products": true,
+	}
+)
+
+// hasAnyWord reports whether name holds one of the words that wasn't asked for.
+func hasAnyWord(name string, these, asked []string) bool {
+	for _, w := range these {
+		if strings.Contains(" "+name+" ", " "+w+" ") && !slices.Contains(asked, w) {
+			return true
+		}
+	}
+	return false
+}
+
+// coversAll reports whether every word of text is one of the words, or its
+// plural: "rice" for "white rice", "apples" for "apple".
+func coversAll(text string, words []string) bool {
+	for _, t := range strings.Fields(text) {
+		if !slices.ContainsFunc(words, func(w string) bool { return t == w || t == w+"s" || t == w+"es" }) {
+			return false
+		}
+	}
+	return text != ""
 }
 
 // fieldScore rates one name: each word found counts, more at the start of a
@@ -171,7 +220,8 @@ func fieldScore(text string, words []string) float64 {
 	s, all := 0.0, true
 	for _, w := range words {
 		switch {
-		case strings.Contains(padded, " "+w+" "):
+		case strings.Contains(padded, " "+w+" "), strings.Contains(padded, " "+w+"s "), strings.Contains(padded, " "+w+"es "):
+			// a whole word, or its plural: "apple" in "Apples, raw"
 			s += 4
 		case strings.Contains(padded, " "+w):
 			s += 3

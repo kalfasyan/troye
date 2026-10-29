@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 
@@ -12,9 +13,32 @@ import (
 	_ "github.com/selfhostit/troye/migrations"
 )
 
+// template is a data dir with every migration applied, bundled foods
+// included, which each test app starts from as a copy.
+var template string
+
+func TestMain(m *testing.M) {
+	empty, err := os.MkdirTemp("", "troye-empty-")
+	if err != nil {
+		panic(err)
+	}
+	migrated, err := tests.NewTestAppWithConfig(core.BaseAppConfig{DataDir: empty})
+	if err != nil {
+		panic(err)
+	}
+	template = migrated.DataDir()
+	if err := migrated.ResetBootstrapState(); err != nil {
+		panic(err)
+	}
+	code := m.Run()
+	_ = os.RemoveAll(empty)
+	_ = os.RemoveAll(template)
+	os.Exit(code)
+}
+
 // newApp starts an empty app with the troye migrations and routes.
 func newApp(t testing.TB) *tests.TestApp {
-	testApp, err := tests.NewTestAppWithConfig(core.BaseAppConfig{DataDir: t.TempDir()})
+	testApp, err := tests.NewTestAppWithConfig(core.BaseAppConfig{DataDir: template})
 	if err != nil {
 		t.Fatal(err)
 	}

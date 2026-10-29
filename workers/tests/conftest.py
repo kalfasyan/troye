@@ -126,7 +126,7 @@ def person(server, admin):
         ).raise_for_status()
         admin.post(
             "/api/collections/foods/records",
-            json={"name": "Rice, white, cooked", "source": "ciqual", "kcal": 130, "protein": 2.7},
+            json={"name": "Rice, white, cooked", "source": "usda", "kcal": 130, "protein": 2.7},
         ).raise_for_status()
     auth = httpx.post(
         f"{server}/api/collections/users/auth-with-password",

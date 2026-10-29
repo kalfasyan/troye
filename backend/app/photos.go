@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"sort"
 	"strings"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/types"
 
+	"github.com/selfhostit/troye/foods"
 	"github.com/selfhostit/troye/push"
 )
 
@@ -337,7 +337,8 @@ var fillerWords = map[string]bool{
 
 // searchFoodsFor finds foods matching a name, best first: those with every
 // word of the name, then those with all but one ("grilled chicken breast"
-// finds "Chicken breast, roasted"), and so on down to single words.
+// finds "Chicken breast, roasted"), down to those with more than half the
+// words, so "unicorn steak" finds nothing rather than any steak.
 func searchFoodsFor(app core.App, user, name string, limit int) ([]*core.Record, error) {
 	var words []string
 	for _, w := range strings.FieldsFunc(strings.ToLower(name), func(r rune) bool {
@@ -352,29 +353,19 @@ func searchFoodsFor(app core.App, user, name string, limit int) ([]*core.Record,
 	}
 	var found []*core.Record
 	seen := map[string]bool{}
-	for n := len(words); n > 0 && len(found) < limit; n-- {
-		var batch []*core.Record
+	for n := len(words); n > len(words)/2 && len(found) < limit; n-- {
 		for _, subset := range combinations(words, n) {
-			params := dbx.Params{"user": user}
-			conds := []string{`(owner = "" || owner = {:user})`}
-			for i, w := range subset {
-				key := fmt.Sprintf("w%d", i)
-				params[key] = w
-				conds = append(conds, fmt.Sprintf("name ~ {:%s}", key))
-			}
-			list, err := app.FindRecordsByFilter("foods", strings.Join(conds, " && "), "", 30, 0, params)
+			list, err := foods.Search(app, user, strings.Join(subset, " "), limit)
 			if err != nil {
 				return nil, err
 			}
 			for _, f := range list {
 				if !seen[f.Id] {
 					seen[f.Id] = true
-					batch = append(batch, f)
+					found = append(found, f)
 				}
 			}
 		}
-		rankFoods(batch, words, user)
-		found = append(found, batch...)
 	}
 	if len(found) > limit {
 		found = found[:limit]
@@ -394,42 +385,6 @@ func combinations(words []string, n int) [][]string {
 		}
 	}
 	return out
-}
-
-// source order when two foods match as well: your own, then the generic tables
-var sourceRank = map[string]int{"custom": 0, "ciqual": 1, "nevo": 2, "usda": 3, "off": 4}
-
-// rankFoods puts the plainest match first: names that start with one of the
-// words, then shorter names, so "Rice, white, cooked" beats "Rice pudding
-// with caramel" for "rice".
-func rankFoods(list []*core.Record, words []string, user string) {
-	score := func(f *core.Record) (int, int, int) {
-		name := strings.ToLower(f.GetString("name"))
-		// names that start with one of the words, and have the fewest other words
-		lead := 1
-		for _, w := range words {
-			if strings.HasPrefix(name, w) {
-				lead = 0
-			}
-		}
-		extra := len(strings.Fields(name))
-		src := sourceRank[f.GetString("source")]
-		if f.GetString("owner") == user {
-			src = -1
-		}
-		return lead, src, extra
-	}
-	sort.SliceStable(list, func(i, j int) bool {
-		li, si, ei := score(list[i])
-		lj, sj, ej := score(list[j])
-		if li != lj {
-			return li < lj
-		}
-		if ei != ej {
-			return ei < ej
-		}
-		return si < sj
-	})
 }
 
 // logPhoto turns a checked draft into diary entries, and remembers each name.

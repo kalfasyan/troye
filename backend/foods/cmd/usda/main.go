@@ -1,7 +1,8 @@
-// Command ciqual turns the Ciqual XML download from ciqual.anses.fr into the
-// table that ships with Troye, backend/foods/data/ciqual.json.gz.
+// Command usda turns the FoodData Central CSV downloads from fdc.nal.usda.gov
+// (SR Legacy and Foundation Foods) into the table that ships with Troye,
+// backend/foods/data/usda.json.gz.
 //
-//	go run ./foods/cmd/ciqual Ciqual_2025_XML.zip
+//	go run ./foods/cmd/usda FoodData_Central_sr_legacy_food_csv_2018-04.zip FoodData_Central_foundation_food_csv_2025-04-24.zip
 package main
 
 import (
@@ -16,22 +17,22 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Fprintln(os.Stderr, "usage: go run ./foods/cmd/ciqual <Ciqual XML zip>")
+	if len(os.Args) < 2 {
+		fmt.Fprintln(os.Stderr, "usage: go run ./foods/cmd/usda <FoodData Central CSV zip>...")
 		os.Exit(2)
 	}
-	t, err := foods.ReadCiqual(os.Args[1])
+	t, err := foods.ReadUSDA(os.Args[1:]...)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	_, here, _, _ := runtime.Caller(0)
-	out := filepath.Join(filepath.Dir(here), "..", "..", "data", "ciqual.json.gz")
+	out := filepath.Join(filepath.Dir(here), "..", "..", "data", "usda.json.gz")
 	if err := write(out, t); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	fmt.Printf("Ciqual %s: %d foods written to %s\n", t.Version, len(t.Foods), out)
+	fmt.Printf("USDA %s: %d foods written to %s\n", t.Version, len(t.Foods), out)
 }
 
 func write(path string, t foods.Table) error {
