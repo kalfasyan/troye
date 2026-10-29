@@ -121,10 +121,10 @@ func TestPhotoFlow(t *testing.T) {
 	if photo.GetString("status") != "ready" || len(items) != 3 {
 		t.Fatalf("photo %s with %d items", photo.GetString("status"), len(items))
 	}
-	if items[0].Food != rice.Id || items[0].Kcal != 234 || len(items[0].Alternatives) != 1 {
+	if items[0].Food != rice.Id || items[0].Kcal != 234 || len(items[0].Alternatives) == 0 {
 		t.Errorf("rice matched to %q (%v kcal), alternatives %v", items[0].FoodName, items[0].Kcal, items[0].Alternatives)
 	}
-	if items[1].Food != chicken.Id {
+	if name := strings.ToLower(items[1].FoodName); !strings.Contains(name, "chicken") || !strings.Contains(name, "breast") {
 		t.Errorf("chicken matched to %q", items[1].FoodName)
 	}
 	if items[2].Food != "" {

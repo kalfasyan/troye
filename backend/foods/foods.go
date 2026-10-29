@@ -1,7 +1,8 @@
 // Package foods fills the foods collection from the food tables and keeps it
 // searchable:
 //
-//   - Ciqual (ANSES, France), bundled with the app under the Open Licence
+//   - USDA FoodData Central (SR Legacy and Foundation Foods), bundled with the
+//     app, in the public domain
 //   - NEVO (RIVM, Netherlands), which the owner downloads and uploads once
 //   - Open Food Facts products sold in Belgium and the Netherlands, downloaded
 //     every month so barcodes work offline, and looked up live otherwise

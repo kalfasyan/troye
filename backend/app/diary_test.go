@@ -16,7 +16,7 @@ func addFood(t testing.TB, a core.App, name, owner string, kcal, protein float64
 		t.Fatal(err)
 	}
 	f := core.NewRecord(foods)
-	source := "ciqual"
+	source := "usda"
 	if owner != "" {
 		source = "custom"
 	}
@@ -95,11 +95,11 @@ func TestDiaryRules(t *testing.T) {
 		status                      int
 		content                     string
 	}{
-		// the bundled Ciqual foods have a source id, the test's foods don't
+		// the bundled USDA foods have a source id, the test's foods don't
 		{"you see shared foods and your own", "ada", http.MethodGet, "/api/collections/foods/records?filter=source_id%3D%27%27", "", http.StatusOK, `"totalItems":2`},
 		{"you don't see others' custom foods", "bob", http.MethodGet, "/api/collections/foods/records?filter=source_id%3D%27%27", "", http.StatusOK, `"totalItems":1`},
 		{"you add a custom food", "ada", http.MethodPost, "/api/collections/foods/records", `{"name":"Soup","source":"custom","owner":"{ada}","kcal":40}`, http.StatusOK, `"name":"Soup"`},
-		{"you can't add a shared food", "ada", http.MethodPost, "/api/collections/foods/records", `{"name":"Soup","source":"ciqual","owner":"{ada}","kcal":40}`, http.StatusBadRequest, ""},
+		{"you can't add a shared food", "ada", http.MethodPost, "/api/collections/foods/records", `{"name":"Soup","source":"usda","owner":"{ada}","kcal":40}`, http.StatusBadRequest, ""},
 		{"you can't change a shared food", "ada", http.MethodPatch, "/api/collections/foods/records/{rice}", `{"kcal":1}`, http.StatusNotFound, ""},
 		{"you log to your own diary", "ada", http.MethodPost, "/api/collections/entries/records", `{"user":"{ada}","date":"2026-10-24","meal":"lunch","food":"{rice}","grams":200}`, http.StatusOK, `"kcal":260`},
 		{"not to someone else's", "bob", http.MethodPost, "/api/collections/entries/records", `{"user":"{ada}","date":"2026-10-24","meal":"lunch","food":"{rice}","grams":200}`, http.StatusBadRequest, ""},

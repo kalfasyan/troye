@@ -2,7 +2,7 @@ import type { RecordModel } from 'pocketbase';
 
 // The food tables Troye searches, and what each one's licence asks us to show.
 
-export type TableName = 'ciqual' | 'nevo' | 'off';
+export type TableName = 'usda' | 'nevo' | 'off';
 
 /** An imported table, as the server records it in food_tables. */
 export interface FoodTable extends RecordModel {
@@ -18,11 +18,12 @@ export const tableInfo: Record<
   TableName,
   { title: string; about: string; credit: string; link: string; download?: string }
 > = {
-  ciqual: {
-    title: 'Ciqual',
-    about: 'About 3,000 everyday foods from the French food agency, in English and French.',
-    credit: 'Anses. Ciqual French food composition table. Licence Ouverte / Open Licence 2.0.',
-    link: 'https://ciqual.anses.fr/',
+  usda: {
+    title: 'USDA FoodData Central',
+    about: 'About 8,000 everyday foods, from fruit and vegetables to cooked meals, in English.',
+    credit:
+      'U.S. Department of Agriculture, Agricultural Research Service. FoodData Central. Public domain.',
+    link: 'https://fdc.nal.usda.gov/',
   },
   nevo: {
     title: 'NEVO',
@@ -50,7 +51,7 @@ export function tableStatus(t: FoodTable | undefined, now = new Date()): string 
   if (t.name === 'off') {
     if (t.imported) parts.push(`updated ${ago(new Date(t.imported.replace(' ', 'T')), now)}`);
   } else if (t.version) {
-    parts.push(`edition ${t.name === 'ciqual' ? t.version.slice(0, 4) : t.version}`);
+    parts.push(`edition ${t.version}`);
   }
   if (t.error) parts.push(`last update failed: ${t.error}`);
   return parts.join(' · ');

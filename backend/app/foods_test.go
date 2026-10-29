@@ -152,6 +152,7 @@ func TestFoodSearch(t *testing.T) {
 	storeFoods(t, a, "nevo",
 		foods.Food{SourceID: "1", Name: "Cheese Gouda 48+ young", NameNL: "Kaas Goudse 48+ jong", Aliases: "jonge kaas", Kcal: 356},
 		foods.Food{SourceID: "2", Name: "Milk semi-skimmed", NameNL: "Melk halfvolle", Kcal: 46},
+		foods.Food{SourceID: "3", Name: "Country-style pâté", NameFR: "Pâté de campagne", Kcal: 300},
 	)
 	storeFoods(t, a, "off",
 		foods.Food{SourceID: "5400000000001", Barcode: "5400000000001", Name: "Jonge kaas plakken", Brand: "Delhaize", Kcal: 360},
@@ -217,7 +218,7 @@ func TestFoodSearch(t *testing.T) {
 		URL:             "/api/app/foods/search?q=p%C3%A2t%C3%A9",
 		Headers:         map[string]string{"Authorization": token},
 		ExpectedStatus:  http.StatusOK,
-		ExpectedContent: []string{`"name":"Country-style pâté"`, `"source":"ciqual"`, `"name_fr":"Pâté de campagne"`},
+		ExpectedContent: []string{`"name":"Country-style pâté"`, `"source":"nevo"`, `"name_fr":"Pâté de campagne"`},
 		// the search field stays on the server
 		NotExpectedContent:    []string{`"search"`},
 		TestAppFactory:        func(testing.TB) *tests.TestApp { return a },

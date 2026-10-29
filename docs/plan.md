@@ -60,10 +60,11 @@ The app runs on a Synology DS220+ (x86-64, Container Manager), set up like Flowy
 
 ## Nutrition data
 
-Tuned for shopping in Belgium, so European tables come first:
+Generic foods in English first, with Belgian and Dutch extras:
 
-- Ciqual (ANSES, France): about 3,500 generic foods with French and English names,
-  under the Open Licence, so it ships with the app.
+- USDA FoodData Central (SR Legacy and Foundation Foods): about 8,000 generic foods
+  with English names, in the public domain, so it ships with the app. (Ciqual was
+  the first choice, but its site was down for weeks, so it was dropped.)
 - NEVO (RIVM, Netherlands): about 2,300 Dutch and Flemish foods. It is free but
   can't be redistributed, so you download it once and Troye imports it, citing
   "NEVO-online version 2025/9.0, RIVM, Bilthoven".
@@ -86,7 +87,7 @@ Each step is one PR that leaves the app working.
 
 1. Turn the template into Troye: rename and remove the demo (branding comes separately).
 2. Profile and onboarding interview, with the budget calculation.
-3. Food diary: Ciqual and NEVO foods, search, recents, custom foods, barcode lookup.
+3. Food diary: USDA and NEVO foods, search, recents, custom foods, barcode lookup.
 4. Weight tracking and its charts (hand-drawn SVG, no chart library).
 5. Photo logging: capture, storage, queue, the Ollama vision worker, confirm screen, push.
 6. Accuracy loop: score models on confirmed photos, so the model is picked by numbers.

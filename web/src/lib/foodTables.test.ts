@@ -3,7 +3,7 @@ import { tableStatus, type FoodTable } from './foodTables';
 
 const table = (extra: Partial<FoodTable>) =>
   ({
-    name: 'ciqual',
+    name: 'usda',
     version: '',
     foods: 0,
     imported: '',
@@ -23,8 +23,8 @@ describe('tableStatus', () => {
   });
 
   it('gives the size and edition', () => {
-    expect(tableStatus(table({ foods: 3185, version: '2025-11-03' }))).toBe(
-      '3,185 foods · edition 2025',
+    expect(tableStatus(table({ foods: 7793, version: '2018-04' }))).toBe(
+      '7,793 foods · edition 2018-04',
     );
     expect(tableStatus(table({ name: 'nevo', foods: 2328, version: '2025/9.0' }))).toBe(
       '2,328 foods · edition 2025/9.0',

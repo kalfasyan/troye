@@ -23,28 +23,38 @@ func TestNormalize(t *testing.T) {
 	}
 }
 
-func TestReadCiqual(t *testing.T) {
-	tbl, err := ReadCiqual("testdata/ciqual.zip")
+func TestReadUSDA(t *testing.T) {
+	tbl, err := ReadUSDA("testdata/usda.zip")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if tbl.Version != "2025-11-03" || len(tbl.Foods) != 3 {
+	// branded foods and foods without energy are left out
+	if tbl.Version != "2018-04" || len(tbl.Foods) != 3 {
 		t.Fatalf("version %q, %d foods", tbl.Version, len(tbl.Foods))
 	}
-	bread := tbl.Foods[0]
-	if bread.SourceID != "7001" || bread.Name != "Bread, wholemeal" || bread.NameFR != "Pain complet ou intégral (à la farine T150)" ||
-		bread.Group != "Cereal products" || bread.Kcal != 241 || bread.Protein != 9.59 || bread.Fiber != 7.5 || bread.Salt != 1.06 {
-		t.Errorf("bread %+v", bread)
+	rice := tbl.Foods[0]
+	if rice.SourceID != "168878" || rice.Name != "Rice, white, long-grain, regular, enriched, cooked" || rice.Group != "Cereal Grains and Pasta" ||
+		rice.Kcal != 130 || rice.Protein != 2.69 || rice.Carbs != 28.17 || rice.Salt != 0.003 || rice.ServingG != 158 || rice.ServingLabel != "1 cup" {
+		t.Errorf("rice %+v", rice)
 	}
-	// traces and "< 0,01" count as 0, "-" is unknown
-	apple := tbl.Foods[1]
-	if apple.Fat != 0 || apple.Salt != 0 || apple.Kcal != 53.6 {
+	// salt from sodium, and a portion with its amount
+	chicken := tbl.Foods[1]
+	if chicken.Salt != 0.185 || chicken.ServingG != 86 || chicken.ServingLabel != "0.5 breast, bone and skin removed" {
+		t.Errorf("chicken %+v", chicken)
+	}
+	// energy from the specific Atwater factors when there is no plain kcal
+	apple := tbl.Foods[2]
+	if apple.Kcal != 58 || apple.Fiber != 2.4 || apple.Sugar != 10.39 || apple.ServingLabel != `1 medium (3" dia)` {
 		t.Errorf("apple %+v", apple)
+	}
+	// the same zip twice adds nothing
+	if twice, err := ReadUSDA("testdata/usda.zip", "testdata/usda.zip"); err != nil || len(twice.Foods) != 3 {
+		t.Errorf("twice: %d foods, %v", len(twice.Foods), err)
 	}
 }
 
-func TestBundledCiqual(t *testing.T) {
-	tbl, err := BundledCiqual()
+func TestBundledUSDA(t *testing.T) {
+	tbl, err := BundledUSDA()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +62,7 @@ func TestBundledCiqual(t *testing.T) {
 		t.Fatalf("version %q, %d foods", tbl.Version, len(tbl.Foods))
 	}
 	for _, f := range tbl.Foods {
-		if f.SourceID == "" || f.Name == "" || f.NameFR == "" {
+		if f.SourceID == "" || f.Name == "" || f.Kcal < 0 {
 			t.Fatalf("incomplete food %+v", f)
 		}
 	}

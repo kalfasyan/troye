@@ -53,7 +53,7 @@
     }
   }
 
-  const order: TableName[] = ['ciqual', 'nevo', 'off'];
+  const order: TableName[] = ['usda', 'nevo', 'off'];
 </script>
 
 <Sheet title="Food data" {onclose}>
