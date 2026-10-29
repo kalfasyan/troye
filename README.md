@@ -13,6 +13,19 @@ calorie budget from your goal, you log food by search, barcode or photo, and you
 follow your weight on a trend chart. Photos are analysed by a vision model on
 your own GPU PC, never by a cloud service, and every photo and log stays at home.
 
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="docs/images/screens/diary.png" alt="Today's diary: a ring of calories left, coloured by carbs, protein and fat, above the fasting window and the meals"><br><sub><b>Your day at a glance.</b> Calories left, macros and your eating window.</sub></td>
+    <td align="center" width="33%"><img src="docs/images/screens/add-food.png" alt="Adding hummus by the tablespoon, with its calories and macros"><br><sub><b>Log in real amounts.</b> Tablespoons, slices and glasses, not only grams.</sub></td>
+    <td align="center" width="33%"><img src="docs/images/screens/weight.png" alt="Weight chart with daily weigh-ins, a smoothed trend line and the goal"><br><sub><b>Watch the trend, not the noise.</b> A smoothed line and your goal date.</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/screens/week.png" alt="The week: calories per day against the budget, days logged and the streak"><br><sub><b>See your week.</b> Every day against its budget, and your streak.</sub></td>
+    <td align="center"><img src="docs/images/screens/onboarding.png" alt="Plato, the plate mascot, welcoming a new person to the onboarding interview"><br><sub><b>A two-minute interview.</b> Plato sets your budget, macros and goal date.</sub></td>
+    <td align="center"><img src="docs/images/screens/diary-dark.png" alt="Today's diary in dark mode"><br><sub><b>Light and dark.</b> An installable app that follows your phone.</sub></td>
+  </tr>
+</table>
+
 It is a work in progress; [docs/plan.md](docs/plan.md) has the architecture and
 the build plan. Troye is built on [plasto](https://github.com/selfhostit/plasto).
 
